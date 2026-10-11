@@ -8,7 +8,9 @@ Gmail からの請求書自動取込・蓄積、支払い依頼内容の自動�
 
 | 文書 | 内容 |
 |------|------|
-| [要求定義](./docs/requirements.md) | 想定業務、As-Is / To-Be、スコープ |
+| [業務要件](./docs/requirements/business_requirements.md) | 想定業務、As-Is / To-Be、スコープ |
+| [システム要件](./docs/requirements/system_requirements/README.md) | 機能ごとのシステム要件 |
+| [freee 連携の実現可能性調査](./docs/design/freee_feasibility.md) | システム要件が freee の仕様上実現できるかの確認結果 |
 
 ## スコープ（要約）
 
@@ -27,4 +29,4 @@ Gmail からの請求書自動取込・蓄積、支払い依頼内容の自動�
 
 ## ステータス
 
-要求定義フェーズ。実装未着手。
+システム要件の定義を完了し、設計フェーズに着手。実装未着手。freee とは通信せず、サンプルデータで検証する。
