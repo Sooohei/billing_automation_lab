@@ -11,6 +11,8 @@ Gmail からの請求書自動取込・蓄積、支払い依頼内容の自動�
 | [業務要件](./docs/requirements/business_requirements.md) | 想定業務、As-Is / To-Be、スコープ |
 | [システム要件](./docs/requirements/system_requirements/README.md) | 機能ごとのシステム要件 |
 | [freee 連携の実現可能性調査](./docs/design/freee_feasibility.md) | システム要件が freee の仕様上実現できるかの確認結果 |
+| [全体構成](./docs/design/architecture.md) | 全 SR 共通の技術スタック、Google Cloud・ローカルの構成、認証 |
+| [SR-00 取引先管理 設計](./docs/design/sr-00_partner_management.md) | 取引先管理のデータモデル、入力チェック、画面 |
 
 ## スコープ（要約）
 
