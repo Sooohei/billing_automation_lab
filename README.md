@@ -8,7 +8,9 @@ Gmail からの請求書自動取込・蓄積、支払い依頼内容の自動�
 
 | 文書 | 内容 |
 |------|------|
-| [要求定義](./docs/requirements.md) | 想定業務、As-Is / To-Be、スコープ |
+| [業務要件](./docs/requirements/business_requirements.md) | 想定業務、As-Is / To-Be、スコープ |
+| [システム要件](./docs/requirements/system_requirements/README.md) | 機能ごとのシステム要件 |
+| [設計](./docs/design/) | 設計ドキュメント |
 
 ## スコープ（要約）
 

@@ -1,4 +1,4 @@
-# 要求定義（requirements）
+# 業務要件（business_requirements）
 
 ## 想定業務
 
