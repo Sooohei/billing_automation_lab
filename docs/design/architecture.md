@@ -252,7 +252,8 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   ├── storage/
 │   │   ├── storage.py        # FileStorage インターフェース
 │   │   ├── local.py          # LocalFileStorage
-│   │   └── gcs.py            # GcsFileStorage
+│   │   ├── gcs.py            # GcsFileStorage
+│   │   └── dependencies.py   # STORAGE_BACKEND に応じた FileStorage を作る
 │   ├── partners/             # SR-00
 │   │   ├── models.py         # テーブル定義
 │   │   ├── normalize.py      # 取引先名・送信元メールアドレスの正規化
