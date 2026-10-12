@@ -7,11 +7,15 @@ import pytest
 from sqlalchemy import Connection, Engine, func, select
 from sqlalchemy.orm import Session
 
+from app.extraction.extractor import RawExtraction
+from app.extraction.models import ExtractionResult
+from app.gmail.client import GmailAuthError
 from app.invoices.models import Invoice
 from app.jobs.hourly import ADVISORY_LOCK_KEY, run_hourly
 from app.storage.local import LocalFileStorage
-from tests.fakes import FakeGmailClient
+from tests.fakes import FakeGmailClient, FakeInvoiceExtractor
 from tests.test_ingest import NOW, START_DATE, make_message
+from tests.test_invoice_repository import make_invoice
 from tests.test_partner_repository import add_partner
 
 
@@ -47,7 +51,7 @@ def test_取込を行いエラーがなければ成功を返す(
 ) -> None:
     gmail = FakeGmailClient([make_message()])
 
-    assert run_hourly(engine, gmail, storage, START_DATE, NOW) is True
+    assert run_hourly(engine, gmail, FakeInvoiceExtractor(), storage, START_DATE, NOW) is True
     assert invoice_count(session) == 1
 
 
@@ -55,7 +59,7 @@ def test_取込でエラーがあれば失敗を返す(engine: Engine, storage: 
     gmail = FakeGmailClient([make_message()])
     gmail.errors["msg-1"] = RuntimeError("取得できない")
 
-    assert run_hourly(engine, gmail, storage, START_DATE, NOW) is False
+    assert run_hourly(engine, gmail, FakeInvoiceExtractor(), storage, START_DATE, NOW) is False
 
 
 def test_取込で想定外のエラーが起きても失敗を返して終わる(
@@ -66,7 +70,10 @@ def test_取込で想定外のエラーが起きても失敗を返して終わ�
 
     monkeypatch.setattr("app.jobs.hourly.ingest", broken_ingest)
 
-    assert run_hourly(engine, FakeGmailClient([]), storage, START_DATE, NOW) is False
+    assert (
+        run_hourly(engine, FakeGmailClient([]), FakeInvoiceExtractor(), storage, START_DATE, NOW)
+        is False
+    )
 
 
 def test_ロックを取れなければ何もせずに終わる(
@@ -78,7 +85,7 @@ def test_ロックを取れなければ何もせずに終わる(
     assert try_lock(other_connection)
     gmail = FakeGmailClient([make_message()])
 
-    assert run_hourly(engine, gmail, storage, START_DATE, NOW) is True
+    assert run_hourly(engine, gmail, FakeInvoiceExtractor(), storage, START_DATE, NOW) is True
     assert gmail.fetched_ids == []
     assert invoice_count(session) == 0
 
@@ -95,7 +102,7 @@ def test_終わったらロックを外す(
         monkeypatch.setattr("app.jobs.hourly._run_steps", lambda *args: 1 / 0)
 
     with contextlib.suppress(ZeroDivisionError):
-        run_hourly(engine, FakeGmailClient([]), storage, START_DATE, NOW)
+        run_hourly(engine, FakeGmailClient([]), FakeInvoiceExtractor(), storage, START_DATE, NOW)
 
     assert try_lock(other_connection)
 
@@ -107,6 +114,49 @@ def test_運用開始日と実行日時を取込に渡す(
     gmail = FakeGmailClient([make_message(received_at=datetime(2026, 10, 5, tzinfo=UTC))])
     now = datetime(2026, 12, 10, 3, 0, tzinfo=UTC)
 
-    run_hourly(engine, gmail, storage, date(2026, 10, 1), now)
+    run_hourly(engine, gmail, FakeInvoiceExtractor(), storage, date(2026, 10, 1), now)
 
     assert invoice_count(session) == 0
+
+
+def extraction_count(session: Session) -> int:
+    return session.scalar(select(func.count()).select_from(ExtractionResult)) or 0
+
+
+def test_取込のあとに抽出を行う(
+    engine: Engine, session: Session, storage: LocalFileStorage
+) -> None:
+    gmail = FakeGmailClient([make_message()])
+    extractor = FakeInvoiceExtractor({b"%PDF-A": RawExtraction(invoice_number="INV-1")})
+
+    assert run_hourly(engine, gmail, extractor, storage, START_DATE, NOW) is True
+
+    [result] = session.scalars(select(ExtractionResult)).all()
+    assert result.invoice_number == "INV-1"
+
+
+def test_取込全体が止まっても抽出を行い失敗を返す(
+    engine: Engine, session: Session, storage: LocalFileStorage
+) -> None:
+    # 前回までに取り込み、まだ抽出していない請求書データ
+    invoice = make_invoice("a" * 64)
+    storage.save(invoice.file_key, b"%PDF-A")
+    session.add(invoice)
+    session.commit()
+    gmail = FakeGmailClient([])
+    gmail.list_error = GmailAuthError("invalid_grant")
+
+    assert run_hourly(engine, gmail, FakeInvoiceExtractor(), storage, START_DATE, NOW) is False
+    assert extraction_count(session) == 1
+
+
+def test_抽出でエラーがあれば失敗を返す(
+    engine: Engine, session: Session, storage: LocalFileStorage
+) -> None:
+    gmail = FakeGmailClient([make_message()])
+    extractor = FakeInvoiceExtractor()
+    extractor.errors[b"%PDF-A"] = RuntimeError("読み取れない")
+
+    assert run_hourly(engine, gmail, extractor, storage, START_DATE, NOW) is False
+    assert invoice_count(session) == 1
+    assert extraction_count(session) == 0

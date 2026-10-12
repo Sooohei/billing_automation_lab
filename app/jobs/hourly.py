@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_engine
+from app.extraction.extract import extract
+from app.extraction.extractor import InvoiceExtractor
 from app.gmail.client import GmailClient
 from app.invoices.ingest import ingest
 from app.storage.dependencies import create_file_storage
@@ -26,6 +28,7 @@ ADVISORY_LOCK_KEY = 20261001
 def run_hourly(
     engine: Engine,
     gmail_client: GmailClient,
+    extractor: InvoiceExtractor,
     storage: FileStorage,
     start_date: date,
     now: datetime,
@@ -37,7 +40,7 @@ def run_hourly(
             logger.info("前回のバッチがまだ動いているため、何もせずに終わります")
             return True
         try:
-            return _run_steps(engine, gmail_client, storage, start_date, now)
+            return _run_steps(engine, gmail_client, extractor, storage, start_date, now)
         finally:
             lock_connection.scalar(select(func.pg_advisory_unlock(ADVISORY_LOCK_KEY)))
             lock_connection.commit()
@@ -46,6 +49,7 @@ def run_hourly(
 def _run_steps(
     engine: Engine,
     gmail_client: GmailClient,
+    extractor: InvoiceExtractor,
     storage: FileStorage,
     start_date: date,
     now: datetime,
@@ -54,14 +58,20 @@ def _run_steps(
 
     try:
         with Session(engine) as session:
-            result = ingest(session, gmail_client, storage, start_date, now)
-        succeeded = succeeded and not result.has_errors
+            ingest_result = ingest(session, gmail_client, storage, start_date, now)
+        succeeded = succeeded and not ingest_result.has_errors
     except Exception:
         # 取込全体が止まっても、続く SR-02 の抽出は行う
         logger.exception("取込で想定外のエラーが起きました")
         succeeded = False
 
-    # SR-02 の抽出は、SR-02 の実装で追加する
+    try:
+        with Session(engine) as session:
+            extract_result = extract(session, extractor, storage)
+        succeeded = succeeded and not extract_result.has_errors
+    except Exception:
+        logger.exception("抽出で想定外のエラーが起きました")
+        succeeded = False
 
     return succeeded
 
@@ -76,6 +86,7 @@ def main() -> None:
     succeeded = run_hourly(
         get_engine(),
         GmailClient(),
+        InvoiceExtractor(),
         create_file_storage(settings),
         settings.ingest_start_date,
         datetime.now(UTC),
