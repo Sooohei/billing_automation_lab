@@ -71,3 +71,10 @@ def test_OriginヘッダーがAPP_ORIGINと一致しないPOSTは403で拒否す
 
     assert response.status_code == 403
     assert "この操作は受け付けられません" in response.text
+
+
+def test_トップを開くと取引先管理へ移る(test_client: TestClient) -> None:
+    response = test_client.get("/", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "/partners"

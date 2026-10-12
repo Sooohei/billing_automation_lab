@@ -42,6 +42,11 @@ class PartnerRepository:
         )
         return list(self._session.scalars(statement))
 
+    def get_active(self, partner_id: uuid.UUID) -> Partner | None:
+        """有効な取引先を返す。削除済みか存在しなければ None。"""
+        statement = select(Partner).where(Partner.id == partner_id, Partner.deleted_at.is_(None))
+        return self._session.scalars(statement).one_or_none()
+
     def get_including_deleted(self, partner_id: uuid.UUID) -> Partner | None:
         """削除済みも含めて取引先を返す。"""
         return self._session.get(Partner, partner_id)

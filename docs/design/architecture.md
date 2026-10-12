@@ -58,6 +58,7 @@
 ## 画面の共通部分
 
 - すべての画面で共通のレイアウト（`templates/base.html`）を使う。上部のメニューに「請求書一覧」（`/invoices`）と「取引先管理」（`/partners`）へのリンクと、ログインしている利用者のメールアドレスを表示する
+- トップ（`/`）を開いたら、請求書一覧（`/invoices`）へ移る。請求書一覧（SR-03）を実装するまでは、取引先管理（`/partners`）へ移る
 - エラーの画面:
 
 | 状態 | 表示 |
@@ -240,9 +241,11 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   ├── auth.py               # 認証（dev / iap の切替）
 │   ├── csrf.py               # CSRF 対策（Origin ヘッダーの確認）
 │   ├── errors.py             # エラーの画面（404・403・500）
+│   ├── templating.py         # Jinja2 の設定
 │   ├── freee/
 │   │   ├── client.py         # FreeeClient インターフェース、FreeeOption
-│   │   └── sample_client.py  # SampleFreeeClient
+│   │   ├── sample_client.py  # SampleFreeeClient
+│   │   └── dependencies.py   # 画面に FreeeClient を渡す依存関係
 │   ├── gmail/
 │   │   ├── client.py         # GmailClient（第 1 段階はサンプル、第 2 段階で Gmail API）
 │   │   └── authorize.py      # Gmail の接続許可を取得するコマンド（第 2 段階）
@@ -252,6 +255,7 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   │   └── gcs.py            # GcsFileStorage
 │   ├── partners/             # SR-00
 │   │   ├── models.py         # テーブル定義
+│   │   ├── normalize.py      # 取引先名・送信元メールアドレスの正規化
 │   │   ├── repository.py     # PartnerRepository
 │   │   ├── service.py        # 入力チェック・登録・変更・削除
 │   │   └── routes.py         # 画面のルーティング
@@ -281,7 +285,10 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   ├── gmail/                # Gmail のサンプルのメール（.eml、第 1 段階）
 │   └── extraction/           # 読み取り結果のサンプル（JSON、第 1 段階）
 ├── tests/
+├── docker/
+│   └── postgres-init/        # PostgreSQL の初回起動時にテスト用の DB を作る SQL
 ├── docker-compose.yml        # PostgreSQL（開発用とテスト用の DB）
+├── alembic.ini
 ├── pyproject.toml            # 依存関係、Ruff・mypy・pytest の設定
 ├── uv.lock
 ├── .python-version           # 3.13

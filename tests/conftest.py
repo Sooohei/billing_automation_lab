@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import Base, get_session
+from app.freee.dependencies import get_freee_client
 from app.main import create_app
+from tests.fakes import FakeFreeeClient
 
 
 @pytest.fixture(scope="session")
@@ -44,5 +46,6 @@ def session(engine: Engine) -> Iterator[Session]:
 def client(session: Session) -> Iterator[TestClient]:
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
+    app.dependency_overrides[get_freee_client] = FakeFreeeClient
     with TestClient(app) as client:
         yield client
