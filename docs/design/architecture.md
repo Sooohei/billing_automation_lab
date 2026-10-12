@@ -285,6 +285,8 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   ├── freee/                # freee のサンプルデータ（JSON）
 │   ├── gmail/                # Gmail のサンプルのメール（.eml、第 1 段階）
 │   └── extraction/           # 読み取り結果のサンプル（JSON、第 1 段階）
+├── scripts/
+│   └── generate_gmail_samples.py  # sample_data/gmail/ のサンプルのメールを作り直す
 ├── tests/
 ├── docker/
 │   └── postgres-init/        # PostgreSQL の初回起動時にテスト用の DB を作る SQL
