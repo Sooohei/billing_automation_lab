@@ -13,6 +13,7 @@ Gmail からの請求書自動取込・蓄積、支払い依頼内容の自動�
 | [freee 連携の実現可能性調査](./docs/design/freee_feasibility.md) | システム要件が freee の仕様上実現できるかの確認結果 |
 | [全体構成](./docs/design/architecture.md) | 全 SR 共通の技術スタック、Google Cloud・ローカルの構成、認証 |
 | [SR-00 取引先管理 設計](./docs/design/sr-00_partner_management.md) | 取引先管理のデータモデル、入力チェック、画面 |
+| [SR-01 Gmail からの請求書取込・蓄積 設計](./docs/design/sr-01_gmail_invoice_ingest.md) | 取込対象の判定、取込の流れ、Gmail への接続 |
 
 ## スコープ（要約）
 

@@ -29,29 +29,40 @@ flowchart LR
     User[利用者のブラウザ] --> IAP[Identity-Aware Proxy<br>Google ログイン]
     IAP --> Run[Cloud Run<br>Web アプリ]
     Run --> SQL[(Cloud SQL<br>PostgreSQL)]
+    Run --> GCS[(Cloud Storage<br>請求書ファイル)]
     Scheduler[Cloud Scheduler] --> Job[Cloud Run Jobs<br>取込・抽出バッチ]
     Job --> SQL
+    Job --> GCS
+    Job --> Gmail[Gmail API]
     Run -.-> Secret[Secret Manager]
     Job -.-> Secret
 ```
 
 - Web アプリ（SR-00、SR-03 の画面）は Cloud Run のサービス 1 つとして動かす。利用者のアクセスは IAP を通す（[認証](#認証)）
-- SR-01・SR-02 の定期処理は Cloud Run Jobs と Cloud Scheduler で動かす想定とする（詳細は SR-01・SR-02 の設計で決める）
+- SR-01・SR-02 の定期処理は Cloud Run Jobs と Cloud Scheduler で動かす（SR-01 は [SR-01 の設計](./sr-01_gmail_invoice_ingest.md)、SR-02 は SR-02 の設計で決める）
 - Cloud Run から Cloud SQL へは Cloud SQL Auth Proxy（Cloud Run の Cloud SQL 接続設定）で接続する
-- 秘匿情報（DB のパスワード、将来の Gmail・freee の認証情報）は Secret Manager に置き、環境変数としてアプリに渡す
+- 請求書ファイル（PDF）は Cloud Storage に保存する（[ファイル保存](#ファイル保存)）
+- 秘匿情報（DB のパスワード、Gmail の認証情報、将来の freee の認証情報）は Secret Manager に置き、環境変数またはファイルとしてアプリに渡す
 
 ### ローカル
 
 ```mermaid
 flowchart LR
     User[ブラウザ] --> App[uvicorn<br>Web アプリ]
+    Cmd[コマンド実行] --> Batch[取込・抽出バッチ]
     App --> PG[(Docker の PostgreSQL)]
-    App --> Sample[サンプルデータ<br>sample_data/freee/]
+    Batch --> PG
+    App --> Files[(ローカルのフォルダ<br>.local/storage/)]
+    Batch --> Files
+    App --> Sample[サンプルデータ<br>sample_data/]
+    Batch --> Sample
+    Batch -.-> Gmail[Gmail API<br>第 2 段階で実装]
 ```
 
 - PostgreSQL は `docker compose` で起動する
-- アプリは `uvicorn` で起動する
-- 秘匿情報は `.env`（Git 管理外）に置く。`.env.example` に項目だけを記載する
+- アプリは `uvicorn` で起動する。取込・抽出バッチはコマンドで手動実行する
+- Gmail は、最終的には実際の Gmail に接続する。実装は、サンプルのメールを返す形を先に作り、Gmail API との連携を後から作る（[Gmail 連携](#gmail-連携)）
+- 秘匿情報は `.env` と `.local/`（どちらも Git 管理外）に置く。`.env.example` に項目だけを記載する
 
 ## 設定値
 
@@ -62,6 +73,11 @@ flowchart LR
 | `DATABASE_URL` | DB の接続先 | `postgresql+psycopg://app:app@localhost:5432/billing` |
 | `FREEE_CLIENT` | freee 連携の実装の切替。本リポジトリでは `sample` のみ | `sample` |
 | `AUTH_MODE` | 認証方式の切替。ローカルは `dev`、Google Cloud は `iap` | `dev` |
+| `GMAIL_TOKEN_FILE` | Gmail の認証情報（OAuth クライアントとリフレッシュトークン）のファイルの場所。Gmail との外部連携（第 2 段階）から使う | `.local/gmail_token.json` |
+| `STORAGE_BACKEND` | ファイル保存先の切替。`local` または `gcs` | `local` |
+| `LOCAL_STORAGE_DIR` | `STORAGE_BACKEND=local` のときの保存先フォルダ | `.local/storage` |
+| `GCS_BUCKET` | `STORAGE_BACKEND=gcs` のときのバケット名 | （ローカルでは使わない） |
+| `INGEST_START_DATE` | SR-01 の運用開始日（`YYYY-MM-DD`、日本時間） | `2026-10-01` |
 
 ## freee 連携
 
@@ -86,6 +102,36 @@ freee とのやり取りは `FreeeClient` インターフェースに閉じ込�
 | `approval_flow_routes.json` | 承認経路 |
 
 形式はいずれも `[{"id": 101, "name": "株式会社Aメディア"}, ...]` とする。
+
+## Gmail 連携
+
+freee と違い、Gmail は最終的に実際に接続する。Gmail とのやり取りは `GmailClient` クラス 1 つに閉じ込め、中身を次の 2 段階で作る。
+
+| 段階 | `GmailClient` の中身 |
+|------|----------------------|
+| 第 1 段階 | `sample_data/gmail/` の `.eml` ファイルをメールとして返す。取込処理の全体を、Gmail に接続せずに作って確かめる |
+| 第 2 段階 | Gmail API で実際の Gmail に接続する形に置き換える。読み取り専用のスコープ（`gmail.readonly`）だけを使う |
+
+- 実装の切替の仕組み（インターフェースや設定値）は設けない。第 2 段階では `GmailClient` の中身を置き換え、メソッドの形は変えない。取込処理は変えない
+- 第 2 段階のあとの自動テストでは、`GmailClient` をテスト用の偽物に差し替える
+
+メソッドと、受信用の Gmail アカウントの認証は [SR-01 の設計](./sr-01_gmail_invoice_ingest.md) を参照。
+
+## ファイル保存
+
+ファイルの保存は `FileStorage` インターフェースに閉じ込める。実装は 2 つ用意し、`STORAGE_BACKEND` で切り替える。
+
+| 実装 | `STORAGE_BACKEND` | 保存先 |
+|------|-------------------|--------|
+| `LocalFileStorage` | `local` | `LOCAL_STORAGE_DIR` のフォルダ |
+| `GcsFileStorage` | `gcs` | `GCS_BUCKET` の Cloud Storage バケット |
+
+| メソッド | 内容 |
+|----------|------|
+| `save(key, data)` | `key`（保存先のパス）にファイルを保存する。同じ `key` があれば上書きする |
+| `load(key)` | `key` のファイルを読み出す |
+
+ファイルを削除するメソッドは設けない（請求書データの保持の要件のため）。
 
 ## 認証
 
@@ -121,15 +167,29 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   ├── freee/
 │   │   ├── client.py         # FreeeClient インターフェース、FreeeOption
 │   │   └── sample_client.py  # SampleFreeeClient
+│   ├── gmail/
+│   │   ├── client.py         # GmailClient（第 1 段階はサンプル、第 2 段階で Gmail API）
+│   │   └── authorize.py      # Gmail の接続許可を取得するコマンド（第 2 段階）
+│   ├── storage/
+│   │   ├── storage.py        # FileStorage インターフェース
+│   │   ├── local.py          # LocalFileStorage
+│   │   └── gcs.py            # GcsFileStorage
 │   ├── partners/             # SR-00
 │   │   ├── models.py         # テーブル定義
 │   │   ├── repository.py     # PartnerRepository
 │   │   ├── service.py        # 入力チェック・登録・変更・削除
 │   │   └── routes.py         # 画面のルーティング
+│   ├── invoices/             # SR-01
+│   │   ├── models.py         # テーブル定義
+│   │   ├── repository.py     # InvoiceRepository
+│   │   └── ingest.py         # 取込処理
+│   ├── jobs/
+│   │   └── ingest.py         # 取込バッチの起動口（Cloud Run Jobs・ローカルのコマンド）
 │   └── templates/            # Jinja2 テンプレート
 ├── migrations/               # Alembic のマイグレーション
 ├── sample_data/
-│   └── freee/                # freee のサンプルデータ（JSON）
+│   ├── freee/                # freee のサンプルデータ（JSON）
+│   └── gmail/                # Gmail のサンプルのメール（.eml、第 1 段階）
 ├── tests/
 ├── docker-compose.yml
 └── .env.example
@@ -149,3 +209,9 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 | デプロイ方法（手動の `gcloud` か、CI か） | 未決。設定作業の前に確認する |
 | IAP でアクセスを許可する Google アカウントのメールアドレス | 未決。設定作業の前に確認する |
 | IAP の OAuth 同意画面の設定（アプリ名、サポートのメールアドレス、公開範囲） | 未決。設定作業の前に確認する |
+| 請求書を受け取る Gmail アカウント（個人の @gmail.com を使う方針） | 未決。設定作業の前に確認する |
+| Gmail API 用の OAuth クライアント（種類はデスクトップ アプリ）と同意画面（「テスト中」のまま使う方針） | 未決。設定作業の前に確認する |
+| 請求書ファイルを置く Cloud Storage のバケット名・ロケーション | 未決。設定作業の前に確認する |
+| 取込バッチの Cloud Run Jobs のジョブ名・Cloud Scheduler の設定 | 未決。設定作業の前に確認する |
+| Secret Manager のシークレット名（DB のパスワード、Gmail の認証情報） | 未決。設定作業の前に確認する |
+| 取込のエラーの通知先（Cloud Monitoring のアラートを使うか） | 未決。設定作業の前に確認する |
