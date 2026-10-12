@@ -159,10 +159,10 @@ PDF は Vertex AI に送られる。Vertex AI は、送ったデータをモデ�
 ### 第 1 段階（サンプルの読み取り結果）
 
 1. [SR-01 のローカルでの試し方](./sr-01_gmail_invoice_ingest.md#第-1-段階サンプルのメール) を行い、請求書データを作る
-2. `sample_data/extraction/` に、サンプルのメールの PDF の SHA-256（`shasum -a 256 {PDF}` で確かめられる）をファイル名にした JSON を置く（`python -m app.jobs.hourly` の取込で同時に抽出される）
+2. サンプルの読み取り結果は、`sample_data/extraction/` に、サンプルのメールの PDF の SHA-256（`shasum -a 256 {PDF}` で確かめられる）をファイル名にした JSON として置いてある。`python -m app.jobs.hourly` の取込で同時に抽出される
 3. `extraction_results` の行ができていることを確認する
 
-サンプルの読み取り結果は、次の場合を確かめられるように用意する。
+サンプルの読み取り結果は、サンプルのメールと一緒に `scripts/generate_samples.py` で作り直せる。次の場合を確かめられるように用意する。
 
 | サンプル | 確かめること |
 |----------|--------------|

@@ -164,7 +164,7 @@ OAuth 同意画面は「テスト中」のまま使うため、リフレッシ�
 3. `python -m app.jobs.hourly` を実行する
 4. `invoices` の行と `.local/storage/invoices/` のファイルができていることを確認する
 
-サンプルのメールは `sample_data/gmail/` に置く。`scripts/generate_gmail_samples.py` で作り直せる。添付する PDF は毎回同じ中身になるように作る（SR-02 のサンプルの読み取り結果を PDF の SHA-256 で探すため）。次の場合を確かめられるように用意する。
+サンプルのメールは `sample_data/gmail/` に置く。`scripts/generate_samples.py` で作り直せる。添付する PDF は毎回同じ中身になるように作る（SR-02 のサンプルの読み取り結果を PDF の SHA-256 で探すため）。次の場合を確かめられるように用意する。
 
 | サンプル | 確かめること |
 |----------|--------------|

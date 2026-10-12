@@ -1,0 +1,9 @@
+{
+  "invoice_number": "C-202610",
+  "qualified_invoice_issuer_number": "Ｔ３４５６-７８９０-１２３４５",
+  "issue_date": "2026-10-05",
+  "due_date": "2026-10-31",
+  "amount_excluding_tax": "300,000",
+  "tax_amount": "30,000",
+  "amount_including_tax": "330,000"
+}
