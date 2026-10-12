@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.gmail.client import Attachment, GmailAuthError, GmailClient, GmailMessage
+from app.gmail.client import Attachment, GmailClient, GmailMessage
 from app.invoices.ingest import ingest, ingest_start_of
 from app.invoices.models import IngestedMessage, Invoice
 from app.partners.models import Partner
@@ -308,34 +308,19 @@ def test_1通のエラーで他のメールの取込を止めない(
     assert ingested_ids(session) == ["msg-2"]
 
 
-def test_Gmailの認証エラーで取込全体を止める(
+def test_メールの一覧を取得できなければ取込全体を止める(
     session: Session, storage: LocalFileStorage, caplog: pytest.LogCaptureFixture
 ) -> None:
-    gmail = FakeGmailClient([make_message("msg-1"), make_message("msg-2", attachments=[PDF_B])])
-    gmail.errors["msg-1"] = GmailAuthError("invalid_grant")
+    gmail = FakeGmailClient([make_message()])
+    gmail.list_error = RuntimeError("一覧を取得できない")
 
     with caplog.at_level(logging.ERROR):
         result = ingest(session, gmail, storage, START_DATE, NOW)
 
     assert result.aborted
     assert result.has_errors
-    assert gmail.fetched_ids == ["msg-1"]
-    assert "Gmail の接続許可が切れています。接続許可を取り直してください" in caplog.text
-
-
-@pytest.mark.parametrize(
-    "error", [GmailAuthError("invalid_grant"), RuntimeError("一覧を取得できない")]
-)
-def test_メールの一覧を取得できなければ取込全体を止める(
-    session: Session, storage: LocalFileStorage, error: Exception
-) -> None:
-    gmail = FakeGmailClient([make_message()])
-    gmail.list_error = error
-
-    result = ingest(session, gmail, storage, START_DATE, NOW)
-
-    assert result.aborted
     assert gmail.fetched_ids == []
+    assert "メールの一覧を取得できなかったため、取込を止めます" in caplog.text
 
 
 def test_リポジトリのサンプルのメールを設計書の表のとおりに取り込む(

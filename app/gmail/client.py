@@ -9,10 +9,6 @@ from pathlib import Path
 DEFAULT_SAMPLE_DIR = Path(__file__).resolve().parents[2] / "sample_data" / "gmail"
 
 
-class GmailAuthError(Exception):
-    """Gmail の認証のエラー（リフレッシュトークンの失効など）。第 2 段階で使う。"""
-
-
 @dataclass(frozen=True)
 class Attachment:
     file_name: str
@@ -30,17 +26,17 @@ class GmailMessage:
 
 
 class GmailClient:
-    """Gmail とのやり取り。
+    """Gmail とのやり取り。Gmail には接続せず、sample_data/gmail/ の .eml をメールとして返す。
 
-    第 1 段階: sample_data/gmail/ の .eml ファイルをメールとして返す（現在の実装）。
-    第 2 段階: Gmail API で実際の Gmail に接続する形に置き換える。メソッドの形は変えない。
+    実際の Gmail に接続する場合は、このクラスの中身を Gmail API に置き換える。
+    メソッドの形は変えない。
     """
 
     def __init__(self, sample_dir: Path = DEFAULT_SAMPLE_DIR) -> None:
         self._sample_dir = sample_dir
 
     def list_message_ids(self, received_after: datetime, senders: list[str]) -> list[str]:
-        """取込対象の候補のメールの ID。第 1 段階では絞り込まず、すべてのメールを返す。
+        """取込対象の候補のメールの ID。サンプルでは絞り込まず、すべてのメールを返す。
 
         取込対象かどうかの最終的な判定は、取込処理が行う。
         """
