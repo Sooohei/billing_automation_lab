@@ -14,7 +14,7 @@
 |------|------|
 | 言語 | Python |
 | Web フレームワーク | FastAPI |
-| 画面 | Jinja2 テンプレートによるサーバーサイド描画 |
+| 画面 | Jinja2 テンプレートによるサーバーサイド描画。部分的な画面の更新に htmx を使う（SR-03） |
 | DB | PostgreSQL |
 | DB アクセス | SQLAlchemy |
 | マイグレーション | Alembic |
@@ -96,8 +96,12 @@ freee とのやり取りは `FreeeClient` インターフェースに閉じ込�
 | `list_account_items()` | 勘定科目の一覧 | SR-00、SR-03 |
 | `list_taxes()` | 税区分の一覧 | SR-00、SR-03 |
 | `list_approval_flow_routes()` | 承認経路（申請経路）の一覧 | SR-00、SR-03 |
+| `list_approval_requests(user)` | 紐付けできる事前申請の一覧 | SR-03 |
+| `upload_receipt(user, pdf, file_name)` | 請求書ファイルをファイルボックスにアップロードし、その識別子を返す | SR-03 |
+| `create_payment_request(user, params)` | 支払依頼を申請し、その識別子を返す | SR-03 |
 
-いずれも `FreeeOption`（`id`: freee 上の識別子、`name`: 表示名）の一覧を返す。税区分は freee 上で `code` が識別子のため、`code` を `id` に入れる。SR-03 で必要なメソッド（事前申請の取得、支払依頼の作成など）は SR-03 の設計で追加する。
+- 上の 4 つは `FreeeOption`（`id`: freee 上の識別子、`name`: 表示名）の一覧を返す。税区分は freee 上で `code` が識別子のため、`code` を `id` に入れる
+- SR-03 で追加した 3 つの詳細は [SR-03 の設計](./sr-03_freee_payment_request.md#freee-とのやり取り) を参照
 
 サンプルデータは `sample_data/freee/` に JSON で置く。
 
@@ -107,8 +111,9 @@ freee とのやり取りは `FreeeClient` インターフェースに閉じ込�
 | `account_items.json` | 勘定科目 |
 | `taxes.json` | 税区分 |
 | `approval_flow_routes.json` | 承認経路 |
+| `approval_requests.json` | 事前申請（各種申請）。形式は [SR-03 の設計](./sr-03_freee_payment_request.md#freee-とのやり取り) を参照 |
 
-形式はいずれも `[{"id": 101, "name": "株式会社Aメディア"}, ...]` とする。
+`approval_requests.json` 以外の形式は、いずれも `[{"id": 101, "name": "株式会社Aメディア"}, ...]` とする。
 
 ## Gmail 連携
 
@@ -151,14 +156,14 @@ freee と違い、Gmail は最終的に実際に接続する。Gmail とのや�
 | 環境 | `AUTH_MODE` | 方式 |
 |------|-------------|------|
 | Google Cloud | `iap` | Cloud Run の前段の IAP（Identity-Aware Proxy）で、Google アカウントでのログインを求める |
-| ローカル | `dev` | ログインを省略し、固定の開発ユーザーとして扱う |
+| ローカル | `dev` | ログインを省略し、固定の開発ユーザー（メールアドレス `dev@example.com`）として扱う |
 
 Google Cloud（`AUTH_MODE=iap`）の動き:
 
 - ログインとアクセスの許可は IAP が行う。アプリにはログイン画面やセッション管理を実装しない
 - アクセスを許可する Google アカウントは、メールアドレスを 1 件ずつ IAM で許可する（IAP で保護されたウェブアプリ ユーザーのロール）。ドメイン単位の許可はしない
 - アプリは、IAP が付けるリクエストヘッダー `X-Goog-IAP-JWT-Assertion` の署名を検証し、そこから利用者のメールアドレスを取り出す。検証に失敗したリクエストは拒否する
-- 利用者のメールアドレスは、SR-03 で申請者を記録するときに使う（詳細は SR-03 の設計で決める）
+- 利用者のメールアドレスは、SR-03 で申請者として記録する（[SR-03 の設計](./sr-03_freee_payment_request.md#申請)）
 
 SR-00 は、利用者が誰であるかを記録しない。ログインしていることだけを求める。
 
@@ -196,8 +201,15 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   │   ├── extractor.py      # InvoiceExtractor（第 1 段階はサンプル、第 2 段階で Gemini）
 │   │   ├── validation.py     # 読み取った値の形式チェック
 │   │   └── extract.py        # 抽出処理
+│   ├── payment_requests/     # SR-03
+│   │   ├── models.py         # テーブル定義
+│   │   ├── repository.py     # 一覧の検索、支払い依頼インプットの読み書き
+│   │   ├── service.py        # インプットの作成・保存・入力チェック・申請
+│   │   └── routes.py         # 画面のルーティング
 │   ├── jobs/
 │   │   └── hourly.py         # 1 時間ごとのバッチ（SR-01 の取込 → SR-02 の抽出）の起動口
+│   ├── static/
+│   │   └── htmx.min.js       # htmx（CDN を使わずリポジトリに置く）
 │   └── templates/            # Jinja2 テンプレート
 ├── migrations/               # Alembic のマイグレーション
 ├── sample_data/
