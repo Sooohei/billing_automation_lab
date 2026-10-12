@@ -9,6 +9,10 @@ from pathlib import Path
 DEFAULT_SAMPLE_DIR = Path(__file__).resolve().parents[2] / "sample_data" / "gmail"
 
 
+class GmailAuthError(Exception):
+    """Gmail の認証のエラー（リフレッシュトークンの失効など）。第 2 段階で使う。"""
+
+
 @dataclass(frozen=True)
 class Attachment:
     file_name: str

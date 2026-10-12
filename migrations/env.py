@@ -13,7 +13,8 @@ from app.partners import models as partner_models  # noqa: F401
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # テストなどでアプリの中から実行したときに、アプリのロガーを無効にしない
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # テストなど、呼び出し側で接続先を指定した場合はそれを使う
 if not config.get_main_option("sqlalchemy.url"):
