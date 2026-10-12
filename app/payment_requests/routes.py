@@ -12,7 +12,14 @@ from sqlalchemy.orm import Session
 from app.auth import CurrentUser, get_current_user
 from app.db import get_session
 from app.extraction.repository import ExtractionRepository
-from app.freee.client import ApprovalRequest, FreeeClient, FreeeError, FreeeOption
+from app.freee.client import (
+    ApprovalRequest,
+    FreeeApiError,
+    FreeeClient,
+    FreeeError,
+    FreeeNoResponseError,
+    FreeeOption,
+)
 from app.freee.dependencies import get_freee_client
 from app.invoices.models import Invoice
 from app.partners.repository import PartnerRepository
@@ -20,9 +27,11 @@ from app.payment_requests.models import PaymentRequestInput, PaymentRequestStatu
 from app.payment_requests.repository import InvoiceFilters, PaymentRequestRepository
 from app.payment_requests.service import (
     AlreadySubmittedError,
+    ApplyValidationError,
     InputNotFoundError,
     PaymentInputForm,
     SaveValidationError,
+    apply_input,
     ensure_input,
     save_input,
 )
@@ -251,6 +260,7 @@ def show_invoice(
     freee_client: FreeeClientDep,
     user: UserDep,
     saved: str = "",
+    applied: str = "",
 ) -> Response:
     invoice = get_invoice(session, invoice_id)
     # 初めて開いたときに、支払い依頼インプットを作る
@@ -268,7 +278,9 @@ def show_invoice(
             invoice,
             payment_input,
             approval_requests,
-            message="保存しました" if saved else None,
+            message=(
+                "freee に支払い依頼を申請しました" if applied else "保存しました" if saved else None
+            ),
         ),
     )
 
@@ -413,3 +425,59 @@ def _parse_uuid(value: str) -> uuid.UUID | None:
         return uuid.UUID(value) if value else None
     except ValueError:
         return None
+
+
+FREEE_NO_RESPONSE_MESSAGE = (
+    "freee から応答を受け取れませんでした。freee 上で申請されている可能性があります。"
+    "再度申請する前に、freee 上でこの請求書の支払依頼が申請されていないことを確認してください"
+)
+
+
+@router.post("/{invoice_id}/apply")
+def apply_invoice_input(
+    request: Request,
+    invoice_id: str,
+    session: SessionDep,
+    freee_client: FreeeClientDep,
+    storage: FileStorageDep,
+    user: UserDep,
+    form: PaymentInputFormDep,
+) -> Response:
+    """画面の入力値を保存したうえで、freee に支払い依頼を申請する。"""
+    invoice = get_invoice(session, invoice_id)
+    approval_requests = fetch_approval_requests(freee_client, user)
+
+    def render(
+        status_code: int, errors: list[str], values: dict[str, str] | None = None
+    ) -> Response:
+        return render_detail(
+            request,
+            session,
+            freee_client,
+            invoice,
+            approval_requests,
+            status_code=status_code,
+            values=values,
+            errors=errors,
+        )
+
+    try:
+        save_input(session, freee_client, invoice.id, form, approval_requests)
+        apply_input(session, freee_client, storage, invoice, user, datetime.now(UTC))
+    except InputNotFoundError:
+        raise HTTPException(status_code=404) from None
+    except AlreadySubmittedError:
+        return render(409, ["申請済です"])
+    except SaveValidationError as e:
+        # 入力チェックに当てはまった場合は、保存も申請もしない
+        return render(422, e.errors, form_values(form))
+    except ApplyValidationError as e:
+        # 申請前のチェックに当てはまった場合も、保存した値は残る
+        return render(422, e.errors)
+    except FreeeApiError as e:
+        logger.warning("freee への申請に失敗しました: invoice_id=%s", invoice.id)
+        return render(502, [f"freee への申請に失敗しました: {e}"])
+    except FreeeNoResponseError:
+        logger.warning("freee から応答を受け取れませんでした: invoice_id=%s", invoice.id)
+        return render(504, [FREEE_NO_RESPONSE_MESSAGE])
+    return RedirectResponse(f"/invoices/{invoice.id}?applied=1", status_code=303)

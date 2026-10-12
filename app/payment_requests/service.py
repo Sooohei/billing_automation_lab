@@ -7,12 +7,15 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
+from app.auth import CurrentUser
 from app.extraction.repository import ExtractionRepository
-from app.freee.client import ApprovalRequest, FreeeClient
+from app.freee.client import ApprovalRequest, FreeeClient, PaymentRequestParams
+from app.invoices.models import Invoice
 from app.partners.models import Partner
 from app.partners.repository import PartnerRepository
-from app.payment_requests.models import PaymentRequestInput
+from app.payment_requests.models import PaymentRequestInput, PaymentRequestStatus
 from app.payment_requests.repository import PaymentRequestRepository
+from app.storage.storage import FileStorage
 
 JST = ZoneInfo("Asia/Tokyo")
 
@@ -250,3 +253,109 @@ def _parse_int(text: str) -> int | None:
         return None
     value = int(text)
     return value if abs(value) <= _BIGINT_MAX else None
+
+
+# 申請
+
+
+class ApplyValidationError(Exception):
+    """申請前のチェックに当てはまった。当てはまったメッセージをすべて持つ。"""
+
+    def __init__(self, errors: list[str]) -> None:
+        super().__init__("\n".join(errors))
+        self.errors = errors
+
+
+# Output で必須の項目と、空のときのメッセージ
+_REQUIRED_FIELDS = {
+    "partner_id": "取引先を選択してください",
+    "title": "申請タイトルを入力してください",
+    "issue_date": "請求書発行日を入力してください",
+    "due_date": "支払期日を入力してください",
+    "amount_including_tax": "税込金額を入力してください",
+    "freee_partner_id": "freee 上の取引先を選択してください",
+    "freee_account_item_id": "勘定科目を選択してください",
+    "freee_tax_code": "税区分を選択してください",
+    "freee_approval_flow_route_id": "承認経路を選択してください",
+}
+
+
+def apply_input(
+    session: Session,
+    freee_client: FreeeClient,
+    storage: FileStorage,
+    invoice: Invoice,
+    user: CurrentUser,
+    now: datetime,
+) -> None:
+    """保存済みの支払い依頼インプットで、freee に支払い依頼を申請する。
+
+    freee から成功の応答を受け取った場合だけ申請済にする。freee がエラーを返した、または
+    応答がなかった場合は FreeeError を送出し、未申請のままにする。
+    """
+    payment_input = PaymentRequestRepository(session).get_for_update(invoice.id)
+    if payment_input is None:
+        session.rollback()
+        raise InputNotFoundError
+    if payment_input.is_submitted:
+        session.rollback()
+        raise AlreadySubmittedError
+
+    errors = [
+        message
+        for field, message in _REQUIRED_FIELDS.items()
+        if getattr(payment_input, field) is None
+    ]
+    if payment_input.pre_application_id is None:
+        errors.append("紐付ける事前申請を選択してください")
+    if errors:
+        session.rollback()
+        raise ApplyValidationError(errors)
+
+    # freee とやり取りする間もロックを持ち続け、同じ請求書の申請が続けて届いても 2 回目は止める
+    try:
+        receipt_id = freee_client.upload_receipt(
+            user, storage.load(invoice.file_key), invoice.file_name
+        )
+        payment_request_id = freee_client.create_payment_request(
+            user, _payment_request_params(payment_input, receipt_id)
+        )
+    except Exception:
+        session.rollback()
+        raise
+
+    payment_input.status = PaymentRequestStatus.SUBMITTED
+    payment_input.freee_payment_request_id = payment_request_id
+    payment_input.applicant_email = user.email
+    payment_input.applied_at = now
+    payment_input.updated_at = now
+    session.commit()
+
+
+def _payment_request_params(
+    payment_input: PaymentRequestInput, receipt_id: int
+) -> PaymentRequestParams:
+    """freee の支払依頼の項目。登録番号・税抜金額・消費税額は、対応する項目がないので送らない。"""
+    # 申請前のチェックを通った後なので、必須の項目はすべて値がある
+    assert payment_input.title is not None
+    assert payment_input.freee_partner_id is not None
+    assert payment_input.issue_date is not None
+    assert payment_input.due_date is not None
+    assert payment_input.amount_including_tax is not None
+    assert payment_input.freee_account_item_id is not None
+    assert payment_input.freee_tax_code is not None
+    assert payment_input.freee_approval_flow_route_id is not None
+    assert payment_input.pre_application_id is not None
+    return PaymentRequestParams(
+        title=payment_input.title,
+        partner_id=payment_input.freee_partner_id,
+        document_code=payment_input.invoice_number,
+        issue_date=payment_input.issue_date,
+        payment_date=payment_input.due_date,
+        amount=payment_input.amount_including_tax,
+        account_item_id=payment_input.freee_account_item_id,
+        tax_code=payment_input.freee_tax_code,
+        approval_flow_route_id=payment_input.freee_approval_flow_route_id,
+        parent_id=payment_input.pre_application_id,
+        receipt_ids=[receipt_id],
+    )
