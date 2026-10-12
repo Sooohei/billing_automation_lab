@@ -47,7 +47,8 @@ class Data:
                     invoice_id=invoice.id, created_from_extraction=False, **payment_input
                 )
             )
-        self.session.flush()
+        # 画面の処理がエラーでロールバックしても消えないように、確定しておく
+        self.session.commit()
         return invoice
 
 

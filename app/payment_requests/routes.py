@@ -5,7 +5,8 @@ from datetime import UTC, date, datetime
 from typing import Annotated, Any
 from urllib.parse import quote, urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.auth import CurrentUser, get_current_user
@@ -17,7 +18,14 @@ from app.invoices.models import Invoice
 from app.partners.repository import PartnerRepository
 from app.payment_requests.models import PaymentRequestInput, PaymentRequestStatus
 from app.payment_requests.repository import InvoiceFilters, PaymentRequestRepository
-from app.payment_requests.service import ensure_input
+from app.payment_requests.service import (
+    AlreadySubmittedError,
+    InputNotFoundError,
+    PaymentInputForm,
+    SaveValidationError,
+    ensure_input,
+    save_input,
+)
 from app.storage.dependencies import get_file_storage
 from app.storage.storage import FileStorage
 from app.templating import templates
@@ -242,6 +250,7 @@ def show_invoice(
     session: SessionDep,
     freee_client: FreeeClientDep,
     user: UserDep,
+    saved: str = "",
 ) -> Response:
     invoice = get_invoice(session, invoice_id)
     # 初めて開いたときに、支払い依頼インプットを作る
@@ -253,8 +262,132 @@ def show_invoice(
     return templates.TemplateResponse(
         request,
         "invoices/detail.html",
-        detail_context(session, freee_client, invoice, payment_input, approval_requests),
+        detail_context(
+            session,
+            freee_client,
+            invoice,
+            payment_input,
+            approval_requests,
+            message="保存しました" if saved else None,
+        ),
     )
+
+
+FormField = Annotated[str, Form()]
+
+
+def payment_input_form(
+    partner_id: FormField = "",
+    title: FormField = "",
+    invoice_number: FormField = "",
+    qualified_invoice_issuer_number: FormField = "",
+    issue_date: FormField = "",
+    due_date: FormField = "",
+    amount_excluding_tax: FormField = "",
+    tax_amount: FormField = "",
+    amount_including_tax: FormField = "",
+    freee_partner_id: FormField = "",
+    freee_account_item_id: FormField = "",
+    freee_tax_code: FormField = "",
+    freee_approval_flow_route_id: FormField = "",
+    # 事前申請のラジオボタンを選んでいなければ送られてこない
+    pre_application_id: Annotated[str | None, Form()] = None,
+) -> PaymentInputForm:
+    return PaymentInputForm(
+        partner_id=partner_id,
+        title=title,
+        invoice_number=invoice_number,
+        qualified_invoice_issuer_number=qualified_invoice_issuer_number,
+        issue_date=issue_date,
+        due_date=due_date,
+        amount_excluding_tax=amount_excluding_tax,
+        tax_amount=tax_amount,
+        amount_including_tax=amount_including_tax,
+        freee_partner_id=freee_partner_id,
+        freee_account_item_id=freee_account_item_id,
+        freee_tax_code=freee_tax_code,
+        freee_approval_flow_route_id=freee_approval_flow_route_id,
+        pre_application_id=pre_application_id,
+    )
+
+
+PaymentInputFormDep = Annotated[PaymentInputForm, Depends(payment_input_form)]
+
+
+def form_values(form: PaymentInputForm) -> dict[str, str]:
+    """入力チェックに当てはまったときに、入力値を残したまま画面を表示し直すための値。"""
+    values = {name: value for name, value in vars(form).items() if name != "pre_application_id"}
+    values["pre_application_id"] = form.pre_application_id or ""
+    return values
+
+
+def render_detail(
+    request: Request,
+    session: Session,
+    freee_client: FreeeClient,
+    invoice: Invoice,
+    approval_requests: list[ApprovalRequest] | None,
+    *,
+    status_code: int,
+    values: dict[str, str] | None = None,
+    errors: list[str] | None = None,
+) -> Response:
+    payment_input = PaymentRequestRepository(session).get(invoice.id)
+    if payment_input is None:
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse(
+        request,
+        "invoices/detail.html",
+        detail_context(
+            session,
+            freee_client,
+            invoice,
+            payment_input,
+            approval_requests,
+            values=values,
+            errors=errors,
+        ),
+        status_code=status_code,
+    )
+
+
+@router.post("/{invoice_id}/save")
+def save_invoice_input(
+    request: Request,
+    invoice_id: str,
+    session: SessionDep,
+    freee_client: FreeeClientDep,
+    user: UserDep,
+    form: PaymentInputFormDep,
+) -> Response:
+    invoice = get_invoice(session, invoice_id)
+    approval_requests = fetch_approval_requests(freee_client, user)
+    try:
+        save_input(session, freee_client, invoice.id, form, approval_requests)
+    except InputNotFoundError:
+        raise HTTPException(status_code=404) from None
+    except AlreadySubmittedError:
+        return render_detail(
+            request,
+            session,
+            freee_client,
+            invoice,
+            approval_requests,
+            status_code=409,
+            errors=["申請済のため修正できません"],
+        )
+    except SaveValidationError as e:
+        return render_detail(
+            request,
+            session,
+            freee_client,
+            invoice,
+            approval_requests,
+            status_code=422,
+            values=form_values(form),
+            errors=e.errors,
+        )
+    return RedirectResponse(f"/invoices/{invoice.id}?saved=1", status_code=303)
 
 
 @router.get("/{invoice_id}/file")
