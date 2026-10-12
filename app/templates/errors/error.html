@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}{{ message }}{% endblock %}
+{% block content %}
+  <p>{{ message }}</p>
+  {% if show_home_link %}<p><a href="/invoices">請求書一覧へ</a></p>{% endif %}
+{% endblock %}
