@@ -1,0 +1,33 @@
+{% macro freee_name(field) -%}
+  {%- set value = payment_input[field] -%}
+  {%- if value is none -%}
+  {%- elif value in option_names[field] -%}{{ option_names[field][value] }}
+  {%- else -%}（freee に存在しない値: {{ value }}）
+  {%- endif -%}
+{%- endmacro %}
+<dl class="readonly">
+  <dt>取引先</dt>
+  <dd>{% if current_partner %}{{ current_partner.name }}{% if current_partner.deleted_at %}（削除済み）{% endif %}{% endif %}</dd>
+  {% for field in input_fields %}
+    <dt>{{ field.label }}{% if field.name in unreadable %}<span class="unreadable-note">読み取れず</span>{% endif %}</dt>
+    <dd>
+      {%- set value = payment_input[field.name] -%}
+      {%- if value is none -%}
+      {%- elif field.input_type == "number" -%}{{ value | yen }}
+      {%- else -%}{{ value }}
+      {%- endif -%}
+    </dd>
+  {% endfor %}
+  {% for field, label, _ in freee_fields %}
+    <dt>{{ label }}</dt>
+    <dd>{{ freee_name(field) }}</dd>
+  {% endfor %}
+  <dt>紐付けた事前申請</dt>
+  <dd>{{ payment_input.pre_application_number }} {{ payment_input.pre_application_title }}</dd>
+  <dt>freee 支払い依頼の識別子</dt>
+  <dd>{{ payment_input.freee_payment_request_id }}</dd>
+  <dt>申請者</dt>
+  <dd>{{ payment_input.applicant_email }}</dd>
+  <dt>申請日時</dt>
+  <dd>{{ payment_input.applied_at | jst }}</dd>
+</dl>
