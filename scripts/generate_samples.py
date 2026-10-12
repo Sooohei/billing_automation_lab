@@ -1,16 +1,23 @@
-"""sample_data/gmail/ のサンプルのメール（.eml）を作り直す。
+"""サンプルデータを作り直す。
 
-    uv run python scripts/generate_gmail_samples.py
+    uv run python scripts/generate_samples.py
 
-添付する PDF は毎回同じバイト列になるように作る。SR-02 のサンプルの読み取り結果は
-PDF の SHA-256 で探すため、PDF の中身を変えるとそちらも作り直しが必要になる。
+- sample_data/gmail/: SR-01 のサンプルのメール（.eml）
+- sample_data/extraction/: SR-02 のサンプルの読み取り結果（{PDF の SHA-256}.json）
+
+添付する PDF は毎回同じバイト列になるように作る。読み取り結果は PDF の SHA-256 で探すため、
+PDF の中身を変えたら、このスクリプトで両方を作り直す。
 """
 
+import hashlib
+import json
 from dataclasses import dataclass
 from email.message import EmailMessage
 from pathlib import Path
 
-OUTPUT_DIR = Path(__file__).resolve().parents[1] / "sample_data" / "gmail"
+SAMPLE_DATA_DIR = Path(__file__).resolve().parents[1] / "sample_data"
+GMAIL_DIR = SAMPLE_DATA_DIR / "gmail"
+EXTRACTION_DIR = SAMPLE_DATA_DIR / "extraction"
 
 
 @dataclass(frozen=True)
@@ -99,6 +106,8 @@ class SampleAttachment:
     file_name: str
     mime_type: str
     data: bytes
+    # SR-02 のサンプルの読み取り結果。None なら JSON を作らない（すべて「読み取れず」になる）
+    extraction: dict[str, str | None] | None = None
 
 
 @dataclass(frozen=True)
@@ -110,8 +119,13 @@ class SampleEmail:
     attachments: list[SampleAttachment]
 
 
-def pdf(file_name: str, data: bytes, mime_type: str = "application/pdf") -> SampleAttachment:
-    return SampleAttachment(file_name, mime_type, data)
+def pdf(
+    file_name: str,
+    data: bytes,
+    mime_type: str = "application/pdf",
+    extraction: dict[str, str | None] | None = None,
+) -> SampleAttachment:
+    return SampleAttachment(file_name, mime_type, data, extraction)
 
 
 SAMPLES = [
@@ -121,7 +135,22 @@ SAMPLES = [
         "株式会社Aメディア 請求担当 <billing@a-media.jp>",
         "【株式会社Aメディア】2026年10月分 ご請求書の送付",
         "Mon, 05 Oct 2026 10:00:00 +0900",
-        [pdf("請求書_AM-2026-10-001.pdf", A_MEDIA_OCTOBER)],
+        [
+            pdf(
+                "請求書_AM-2026-10-001.pdf",
+                A_MEDIA_OCTOBER,
+                # すべての項目がある → すべて「読み取り済」になる
+                extraction={
+                    "invoice_number": "AM-2026-10-001",
+                    "qualified_invoice_issuer_number": "T1234567890123",
+                    "issue_date": "2026-10-01",
+                    "due_date": "2026-10-31",
+                    "amount_excluding_tax": "1000000",
+                    "tax_amount": "100000",
+                    "amount_including_tax": "1100000",
+                },
+            )
+        ],
     ),
     # 登録済みの送信元から、PDF 2 件 → 請求書データが 2 件できる
     SampleEmail(
@@ -143,6 +172,16 @@ SAMPLES = [
                         50_000,
                     )
                 ),
+                # 一部の項目が null → その項目だけ「読み取れず」になる
+                extraction={
+                    "invoice_number": "BN-1001",
+                    "qualified_invoice_issuer_number": "T2345678901234",
+                    "issue_date": "2026-10-01",
+                    "due_date": "2026-11-30",
+                    "amount_excluding_tax": None,
+                    "tax_amount": None,
+                    "amount_including_tax": "550000",
+                },
             ),
             pdf(
                 "BN-1002.pdf",
@@ -157,6 +196,7 @@ SAMPLES = [
                         12_000,
                     )
                 ),
+                # 読み取り結果の JSON がない → すべて「読み取れず」になる
             ),
         ],
     ),
@@ -181,6 +221,16 @@ SAMPLES = [
                     )
                 ),
                 "application/octet-stream",
+                # 登録番号がハイフン付き・全角、金額がカンマ付き → そろえて保存される
+                extraction={
+                    "invoice_number": "C-202610",
+                    "qualified_invoice_issuer_number": "Ｔ３４５６-７８９０-１２３４５",
+                    "issue_date": "2026-10-05",
+                    "due_date": "2026-10-31",
+                    "amount_excluding_tax": "300,000",
+                    "tax_amount": "30,000",
+                    "amount_including_tax": "330,000",
+                },
             )
         ],
     ),
@@ -239,6 +289,16 @@ SAMPLES = [
                         80_000,
                     )
                 ),
+                # 日付が実在しない、金額が数字でない → その項目が「読み取れず」になる
+                extraction={
+                    "invoice_number": "DP-26-0101",
+                    "qualified_invoice_issuer_number": "T4567890123456",
+                    "issue_date": "2026-10-09",
+                    "due_date": "2026-02-30",
+                    "amount_excluding_tax": "800000",
+                    "tax_amount": "80000",
+                    "amount_including_tax": "八十八万円",
+                },
             )
         ],
     ),
@@ -295,12 +355,21 @@ def build_email(sample: SampleEmail) -> bytes:
 
 
 def main() -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    for old in OUTPUT_DIR.glob("*.eml"):
+    GMAIL_DIR.mkdir(parents=True, exist_ok=True)
+    EXTRACTION_DIR.mkdir(parents=True, exist_ok=True)
+    for old in [*GMAIL_DIR.glob("*.eml"), *EXTRACTION_DIR.glob("*.json")]:
         old.unlink()
+
     for sample in SAMPLES:
-        (OUTPUT_DIR / f"{sample.message_id}.eml").write_bytes(build_email(sample))
-        print(f"{sample.message_id}.eml")
+        (GMAIL_DIR / f"{sample.message_id}.eml").write_bytes(build_email(sample))
+        print(f"gmail/{sample.message_id}.eml")
+        for attachment in sample.attachments:
+            if attachment.extraction is None:
+                continue
+            sha256 = hashlib.sha256(attachment.data).hexdigest()
+            content = json.dumps(attachment.extraction, ensure_ascii=False, indent=2) + "\n"
+            (EXTRACTION_DIR / f"{sha256}.json").write_text(content, encoding="utf-8")
+            print(f"extraction/{sha256}.json（{attachment.file_name}）")
 
 
 if __name__ == "__main__":

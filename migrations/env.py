@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.db import Base
 
 # テーブル定義を読み込む
+from app.extraction import models as extraction_models  # noqa: F401
 from app.invoices import models as invoice_models  # noqa: F401
 from app.partners import models as partner_models  # noqa: F401
 

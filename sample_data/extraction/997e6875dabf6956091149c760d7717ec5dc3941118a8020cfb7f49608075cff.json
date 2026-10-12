@@ -1,0 +1,9 @@
+{
+  "invoice_number": "DP-26-0101",
+  "qualified_invoice_issuer_number": "T4567890123456",
+  "issue_date": "2026-10-09",
+  "due_date": "2026-02-30",
+  "amount_excluding_tax": "800000",
+  "tax_amount": "80000",
+  "amount_including_tax": "八十八万円"
+}

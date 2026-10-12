@@ -1,0 +1,9 @@
+{
+  "invoice_number": "BN-1001",
+  "qualified_invoice_issuer_number": "T2345678901234",
+  "issue_date": "2026-10-01",
+  "due_date": "2026-11-30",
+  "amount_excluding_tax": null,
+  "tax_amount": null,
+  "amount_including_tax": "550000"
+}

@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from app.extraction.extractor import InvoiceExtractor, RawExtraction
 from app.freee.client import FreeeOption
 from app.gmail.client import GmailClient, GmailMessage
 
@@ -40,3 +41,17 @@ class FakeGmailClient(GmailClient):
         if message_id in self.errors:
             raise self.errors.pop(message_id)
         return self.messages[message_id]
+
+
+class FakeInvoiceExtractor(InvoiceExtractor):
+    """テスト用の InvoiceExtractor。PDF の中身ごとに渡した読み取り結果を返す。"""
+
+    def __init__(self, results: dict[bytes, RawExtraction] | None = None) -> None:
+        self.results = results or {}
+        # PDF の中身ごとに、extract で起こすエラー
+        self.errors: dict[bytes, Exception] = {}
+
+    def extract(self, pdf: bytes, file_name: str) -> RawExtraction:
+        if pdf in self.errors:
+            raise self.errors.pop(pdf)
+        return self.results.get(pdf, RawExtraction())
