@@ -1,0 +1,18 @@
+{% for row in rows %}
+  <tr>
+    <td>{{ row.received_at | jst }}</td>
+    <td>{{ row.partner_name or "" }}</td>
+    <td class="amount">{{ row.amount_including_tax | yen }}</td>
+    <td>{{ row.due_date or "" }}</td>
+    <td>{{ status_labels[row.status] }}</td>
+    <td><a href="/invoices/{{ row.invoice_id }}">確認・修正</a></td>
+  </tr>
+{% endfor %}
+{% if has_more %}
+  <tr id="more-rows">
+    <td colspan="6">
+      {# 押すと、このボタンの行を次の 10 件の行（と次のボタン）に置き換える #}
+      <button type="button" hx-get="{{ next_url }}" hx-target="#more-rows" hx-swap="outerHTML">次の 10 件を表示</button>
+    </td>
+  </tr>
+{% endif %}
