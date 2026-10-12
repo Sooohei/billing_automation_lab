@@ -10,6 +10,7 @@ from app.db import Base
 from app.extraction import models as extraction_models  # noqa: F401
 from app.invoices import models as invoice_models  # noqa: F401
 from app.partners import models as partner_models  # noqa: F401
+from app.payment_requests import models as payment_request_models  # noqa: F401
 
 config = context.config
 

@@ -18,7 +18,8 @@ class Invoice(Base):
     file_name: Mapped[str] = mapped_column(Text)
     sender_email: Mapped[str] = mapped_column(Text)
     subject: Mapped[str] = mapped_column(Text)
-    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # SR-03 の一覧の絞り込みで使う
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     ingested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
