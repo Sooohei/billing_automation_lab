@@ -5,6 +5,8 @@
   {%- else -%}（freee に存在しない値: {{ value }}）
   {%- endif -%}
 {%- endmacro %}
+<div class="card card-body">
+<h2>申請した内容</h2>
 <dl class="readonly">
   <dt>取引先</dt>
   <dd>{% if current_partner %}{{ current_partner.name }}{% if current_partner.deleted_at %}（削除済み）{% endif %}{% endif %}</dd>
@@ -31,3 +33,4 @@
   <dt>申請日時</dt>
   <dd>{{ payment_input.applied_at | jst }}</dd>
 </dl>
+</div>

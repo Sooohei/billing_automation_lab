@@ -2,44 +2,62 @@
 {% block title %}請求書一覧{% endblock %}
 {% block head %}<script src="/static/htmx.min.js"></script>{% endblock %}
 {% block content %}
-  <h1>請求書一覧</h1>
-  <form method="get" action="/invoices" class="filters">
-    <label>受信日時 <input type="date" name="received_from" value="{{ filters.received_from }}"></label>
-    〜
-    <input type="date" name="received_to" value="{{ filters.received_to }}" aria-label="受信日時の終了日">
-    <label>取引先
-      <select name="partner_id">
+  <div class="page-header">
+    <div>
+      <h1>請求書一覧</h1>
+      <p class="page-subtitle">支払期日の近い順に表示します。請求書を選んで内容を確認し、freee に申請します。</p>
+    </div>
+  </div>
+  <form method="get" action="/invoices" class="card filters">
+    <div class="field">
+      <label for="received_from">受信日時</label>
+      <div class="date-range">
+        <input type="date" id="received_from" name="received_from" value="{{ filters.received_from }}">
+        <span class="muted">〜</span>
+        <input type="date" name="received_to" value="{{ filters.received_to }}" aria-label="受信日時の終了日">
+      </div>
+    </div>
+    <div class="field">
+      <label for="partner_id">取引先</label>
+      <select id="partner_id" name="partner_id">
         <option value="">すべて</option>
         {% for partner in partners %}
           <option value="{{ partner.id }}"{% if filters.partner_id == partner.id | string %} selected{% endif %}>{{ partner.name }}</option>
         {% endfor %}
       </select>
-    </label>
-    <label>申請状態
-      <select name="status">
+    </div>
+    <div class="field">
+      <label for="status">申請状態</label>
+      <select id="status" name="status">
         <option value="">すべて</option>
         {% for value, label in status_labels.items() %}
           <option value="{{ value.value }}"{% if filters.status == value.value %} selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
-    </label>
-    <button type="submit">絞り込む</button>
-    <a href="/invoices">条件をクリア</a>
+    </div>
+    <div class="filter-actions">
+      <a class="btn btn-ghost" href="/invoices">条件をクリア</a>
+      <button type="submit" class="btn-primary">絞り込む</button>
+    </div>
   </form>
-  <table>
-    <thead>
-      <tr>
-        <th>受信日時</th>
-        <th>取引先</th>
-        <th>税込金額</th>
-        <th>支払期日</th>
-        <th>申請状態</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="invoice-rows">
-      {% include "invoices/_rows.html" %}
-    </tbody>
-  </table>
-  {% if not rows %}<p>該当する請求書はありません。</p>{% endif %}
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>受信日時</th>
+            <th>取引先</th>
+            <th class="amount">税込金額</th>
+            <th>支払期日</th>
+            <th>申請状態</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="invoice-rows">
+          {% include "invoices/_rows.html" %}
+        </tbody>
+      </table>
+    </div>
+    {% if not rows %}<p class="empty-state">該当する請求書はありません。</p>{% endif %}
+  </div>
 {% endblock %}

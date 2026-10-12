@@ -1,4 +1,5 @@
-<form method="post" action="/invoices/{{ invoice.id }}/save" id="input-form">
+<form method="post" action="/invoices/{{ invoice.id }}/save" id="input-form" class="card card-body">
+  <h2>支払い依頼インプット</h2>
   <div class="field">
     <label for="partner_id">取引先</label>
     <select id="partner_id" name="partner_id">
@@ -9,6 +10,7 @@
     </select>
   </div>
 
+  <div class="input-grid">
   {% for field in input_fields %}
     <div class="field{% if field.name in unreadable %} unreadable{% endif %}">
       <label for="{{ field.name }}">
@@ -19,7 +21,10 @@
              value="{{ values[field.name] }}"{% if field.input_type == "number" %} step="1"{% endif %}>
     </div>
   {% endfor %}
+  </div>
 
+  <p class="form-section-title">freee の申請用の項目</p>
+  <div class="input-grid">
   {% for field, label, _ in freee_fields %}
     <div class="field">
       <label for="{{ field }}">{{ label }}</label>
@@ -34,13 +39,15 @@
       {% endif %}
     </div>
   {% endfor %}
+  </div>
 
+  <p class="form-section-title">紐付ける事前申請</p>
   <fieldset class="field">
-    <legend>紐付ける事前申請</legend>
+    <legend class="visually-hidden">紐付ける事前申請</legend>
     {% if payment_input.pre_application_id is not none %}
-      <p>紐付けている事前申請: {{ payment_input.pre_application_number }} {{ payment_input.pre_application_title }}</p>
+      <p class="pre-application-current">紐付けている事前申請: {{ payment_input.pre_application_number }} {{ payment_input.pre_application_title }}</p>
     {% else %}
-      <p>紐付けている事前申請はありません。</p>
+      <p class="pre-application-current muted">紐付けている事前申請はありません。</p>
     {% endif %}
     {% if approval_requests is none %}
       <p class="errors">事前申請を取得できませんでした</p>
@@ -49,27 +56,27 @@
       <input type="search" id="pre-application-search" placeholder="件名に含まれる文字列">
       <div class="pre-applications">
         <table>
-          <thead><tr><th></th><th>申請番号</th><th>件名</th><th>金額</th><th>申請日</th></tr></thead>
+          <thead><tr><th></th><th>申請番号</th><th>件名</th><th class="amount">金額</th><th>申請日</th></tr></thead>
           <tbody>
             {% for request in approval_requests %}
               <tr class="pre-application" data-title="{{ request.title }}">
                 <td><input type="radio" name="pre_application_id" value="{{ request.id }}" id="pre-application-{{ request.id }}"{% if values.pre_application_id == request.id | string %} checked{% endif %}></td>
                 <td><label for="pre-application-{{ request.id }}">{{ request.application_number }}</label></td>
                 <td>{{ request.title }}</td>
-                <td>{{ request.amount | yen }}</td>
+                <td class="amount">{{ request.amount | yen }}</td>
                 <td>{{ request.application_date }}</td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
-        {% if not approval_requests %}<p>紐付けできる事前申請はありません。</p>{% endif %}
+        {% if not approval_requests %}<p class="empty-state">紐付けできる事前申請はありません。</p>{% endif %}
       </div>
     {% endif %}
   </fieldset>
 
-  <div class="actions">
+  <div class="form-actions">
     <button type="submit">保存</button>
-    <button type="submit" formaction="/invoices/{{ invoice.id }}/apply" id="apply-button">申請</button>
+    <button type="submit" formaction="/invoices/{{ invoice.id }}/apply" id="apply-button" class="btn-primary">申請</button>
   </div>
 </form>
 <script>

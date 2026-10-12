@@ -1,36 +1,43 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-  <h1>{{ title }}</h1>
+  <a class="back-link" href="/partners">← 取引先管理へ</a>
+  <div class="page-header">
+    <h1>{{ title }}</h1>
+  </div>
   {% if errors %}
     <ul class="errors">
       {% for error in errors %}<li>{{ error }}</li>{% endfor %}
     </ul>
   {% endif %}
-  <form method="post" action="{{ action }}">
-    <p>
-      <label for="name">取引先名</label><br>
-      <input type="text" id="name" name="name" value="{{ values.name }}" size="40">
-    </p>
-    <p>
-      <label for="emails">送信元メールアドレス（1 行に 1 件）</label><br>
-      <textarea id="emails" name="emails" rows="4" cols="40">{{ values.emails }}</textarea>
-    </p>
-    {% for field, label, _ in fields %}
-      <p>
-        <label for="{{ field }}">{{ label }}</label><br>
-        <select id="{{ field }}" name="{{ field }}">
-          <option value="">選択してください</option>
-          {% for option in options[field] %}
-            <option value="{{ option.id }}"{% if values[field] == option.id | string %} selected{% endif %}>{{ option.name }}</option>
-          {% endfor %}
-        </select>
-        {% if field in missing %}<span class="errors">{{ missing[field] }}。選び直してください</span>{% endif %}
-      </p>
-    {% endfor %}
-    <p>
-      <button type="submit">保存</button>
-      <a href="/partners">戻る</a>
-    </p>
+  <form method="post" action="{{ action }}" class="card card-body form-card">
+    <div class="field">
+      <label for="name">取引先名</label>
+      <input type="text" id="name" name="name" value="{{ values.name }}">
+    </div>
+    <div class="field">
+      <label for="emails">送信元メールアドレス</label>
+      <textarea id="emails" name="emails" rows="4">{{ values.emails }}</textarea>
+      <p class="field-hint">1 行に 1 件入力します。大文字と小文字は区別しません。</p>
+    </div>
+    <p class="form-section-title">freee に申請するときの既定値</p>
+    <div class="form-grid">
+      {% for field, label, _ in fields %}
+        <div class="field">
+          <label for="{{ field }}">{{ label }}</label>
+          <select id="{{ field }}" name="{{ field }}">
+            <option value="">選択してください</option>
+            {% for option in options[field] %}
+              <option value="{{ option.id }}"{% if values[field] == option.id | string %} selected{% endif %}>{{ option.name }}</option>
+            {% endfor %}
+          </select>
+          {% if field in missing %}<span class="missing-note">{{ missing[field] }}。選び直してください</span>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions">
+      <a class="btn btn-ghost" href="/partners">キャンセル</a>
+      <button type="submit" class="btn-primary">保存</button>
+    </div>
   </form>
 {% endblock %}

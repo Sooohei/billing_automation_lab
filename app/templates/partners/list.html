@@ -1,37 +1,50 @@
 {% extends "base.html" %}
 {% block title %}取引先管理{% endblock %}
 {% block content %}
-  <h1>取引先管理</h1>
-  <p><a href="/partners/new">取引先を登録する</a></p>
-  {% if partners %}
-    <table>
-      <thead>
-        <tr>
-          <th>取引先名</th>
-          <th>送信元メールアドレス</th>
-          {% for _, label, _ in fields %}<th>{{ label }}</th>{% endfor %}
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for partner in partners %}
-          <tr>
-            <td>{{ partner.name }}</td>
-            <td>{% for email in partner.emails %}{{ email.email }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
-            {% for field, _, _ in fields %}<td>{{ freee_name(field, partner[field]) }}</td>{% endfor %}
-            <td>
-              <a href="/partners/{{ partner.id }}/edit">変更</a>
-              <form method="post" action="/partners/{{ partner.id }}/delete" style="display: inline"
-                    data-confirm="取引先「{{ partner.name }}」を削除しますか？"
-                    onsubmit="return confirm(this.dataset.confirm)">
-                <button type="submit">削除</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>登録されている取引先はありません。</p>
-  {% endif %}
+  <div class="page-header">
+    <div>
+      <h1>取引先管理</h1>
+      <p class="page-subtitle">請求書の送信元メールアドレスと、freee に申請するときの既定値を登録します。</p>
+    </div>
+    <a class="btn btn-primary" href="/partners/new">＋ 取引先を登録する</a>
+  </div>
+  <div class="card">
+    {% if partners %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>取引先名</th>
+              <th>送信元メールアドレス</th>
+              {% for _, label, _ in fields %}<th>{{ label }}</th>{% endfor %}
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for partner in partners %}
+              <tr>
+                <td><strong>{{ partner.name }}</strong></td>
+                <td>
+                  <ul class="email-list">
+                    {% for email in partner.emails %}<li>{{ email.email }}</li>{% endfor %}
+                  </ul>
+                </td>
+                {% for field, _, _ in fields %}<td class="muted">{{ freee_name(field, partner[field]) }}</td>{% endfor %}
+                <td class="actions">
+                  <a class="btn btn-small" href="/partners/{{ partner.id }}/edit">変更</a>
+                  <form method="post" action="/partners/{{ partner.id }}/delete"
+                        data-confirm="取引先「{{ partner.name }}」を削除しますか？"
+                        onsubmit="return confirm(this.dataset.confirm)">
+                    <button type="submit" class="btn-danger btn-small">削除</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">登録されている取引先はありません。</p>
+    {% endif %}
+  </div>
 {% endblock %}

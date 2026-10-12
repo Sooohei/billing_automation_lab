@@ -16,7 +16,7 @@ def error_response(request: Request, status_code: int, message: str) -> Response
     return templates.TemplateResponse(
         request,
         "errors/error.html",
-        {"message": message, "show_home_link": status_code == 404},
+        {"message": message, "status_code": status_code, "show_home_link": status_code == 404},
         status_code=status_code,
     )
 

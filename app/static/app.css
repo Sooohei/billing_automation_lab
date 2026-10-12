@@ -1,0 +1,734 @@
+/* 画面共通のスタイル。外部の CDN やフォントは使わない */
+
+:root {
+  --color-bg: #f5f6fa;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f9fafb;
+  --color-border: #e4e7ec;
+  --color-border-strong: #d0d5dd;
+  --color-text: #1d2939;
+  --color-text-muted: #667085;
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-soft: #eef2ff;
+  --color-danger: #d92d20;
+  --color-danger-soft: #fef3f2;
+  --color-success: #067647;
+  --color-success-soft: #ecfdf3;
+  --color-warning: #b54708;
+  --color-warning-soft: #fffaeb;
+  --color-warning-border: #fec84b;
+  --radius: 10px;
+  --radius-small: 6px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+h2 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* ヘッダー */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  height: 60px;
+  padding: 0 1.5rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.app-brand:hover {
+  text-decoration: none;
+}
+
+.app-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.app-nav {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.app-nav a {
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-small);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.app-nav a:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.app-nav a.active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.app-user-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* レイアウト */
+
+.app-main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.app-main.wide {
+  max-width: none;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.empty-state {
+  padding: 3rem 1.5rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* ボタン */
+
+button,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0 1rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+button:hover,
+.btn:hover {
+  background: var(--color-surface-muted);
+  text-decoration: none;
+}
+
+button:focus-visible,
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+}
+
+.btn-danger {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-danger);
+}
+
+.btn-danger:hover {
+  background: var(--color-danger-soft);
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.btn-small {
+  min-height: 30px;
+  padding: 0 0.7rem;
+  font-size: 0.85rem;
+}
+
+/* フォーム */
+
+label {
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  height: 38px;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+textarea {
+  height: auto;
+  resize: vertical;
+}
+
+select {
+  appearance: none;
+  padding-right: 2.2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%23667085' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+}
+
+.field {
+  margin: 0 0 1.1rem;
+}
+
+.field > label,
+.field > legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.field-hint {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1.25rem;
+}
+
+.form-grid .span-2 {
+  grid-column: span 2;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.form-card {
+  max-width: 760px;
+}
+
+/* 確認・修正画面の入力欄は 2 列に並べ、文字の欄だけ横幅いっぱいにする */
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1.25rem;
+}
+
+.input-grid > .field:has(> input[type="text"]) {
+  grid-column: 1 / -1;
+}
+
+.form-section-title {
+  margin: 1.5rem 0 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* 読み取れず・freee にない値 */
+
+.unreadable input {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-soft);
+}
+
+.unreadable-note {
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.missing-note {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--color-danger);
+  font-size: 0.8rem;
+}
+
+/* メッセージ */
+
+.alert {
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid;
+  border-radius: var(--radius);
+}
+
+.alert ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.alert-success {
+  border-color: #abefc6;
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.alert-error,
+ul.errors {
+  border-color: #fecdca;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+ul.errors {
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem 0.85rem 2.2rem;
+  border: 1px solid #fecdca;
+  border-radius: var(--radius);
+}
+
+p.errors {
+  color: var(--color-danger);
+}
+
+/* 表 */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover td {
+  background: #fafbff;
+}
+
+td.amount,
+th.amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+td.nowrap {
+  white-space: nowrap;
+}
+
+td.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+td.actions form {
+  display: inline;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.email-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 申請状態のバッジ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge-unsubmitted {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.badge-submitted {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+/* 請求書一覧の絞り込み */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.filters .field {
+  margin: 0;
+}
+
+.filters .date-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filters .date-range input {
+  width: 160px;
+}
+
+.filters select {
+  min-width: 180px;
+}
+
+.filters .filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+tr.more-row td {
+  padding: 1rem;
+  background: var(--color-surface-muted);
+  text-align: center;
+}
+
+/* 請求書の確認・修正 */
+
+.invoice-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  margin: 0.4rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(420px, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.detail .file {
+  position: sticky;
+  top: 84px;
+  overflow: hidden;
+}
+
+.detail .file iframe {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 120px);
+  border: none;
+}
+
+.pre-application-current {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-small);
+  background: var(--color-surface-muted);
+  font-size: 0.85rem;
+}
+
+.pre-applications {
+  max-height: 18rem;
+  margin-top: 0.75rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+}
+
+.pre-applications th,
+.pre-applications td {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* 金額と申請日は折り返さない */
+.pre-applications td.amount,
+.pre-applications td:last-child {
+  white-space: nowrap;
+}
+
+.pre-applications th {
+  position: sticky;
+  top: 0;
+}
+
+.pre-applications tr:has(input:checked) td {
+  background: var(--color-primary-soft);
+}
+
+.readonly {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  margin: 0;
+}
+
+.readonly dt,
+.readonly dd {
+  margin: 0;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.readonly dt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.readonly dd {
+  font-weight: 500;
+}
+
+/* エラーの画面 */
+
+.error-page {
+  max-width: 480px;
+  margin: 4rem auto;
+  padding: 2.5rem 2rem;
+  text-align: center;
+}
+
+.error-page .error-code {
+  margin: 0 0 0.5rem;
+  color: var(--color-primary);
+  font-size: 2.5rem;
+  font-weight: 800;
+}
+
+.error-page p {
+  margin: 0 0 1.5rem;
+}
+
+@media (max-width: 960px) {
+  .input-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail {
+    grid-template-columns: 1fr;
+  }
+
+  .detail .file {
+    position: static;
+  }
+
+  .detail .file iframe {
+    height: 70vh;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid .span-2 {
+    grid-column: auto;
+  }
+}

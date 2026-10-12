@@ -265,6 +265,7 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   ├── jobs/
 │   │   └── hourly.py         # 1 時間ごとのバッチ（SR-01 の取込 → SR-02 の抽出）の起動口
 │   ├── static/
+│   │   ├── app.css           # 画面共通のスタイル（外部の CDN やフォントは使わない）
 │   │   └── htmx.min.js       # htmx（CDN を使わずリポジトリに置く）
 │   └── templates/            # Jinja2 テンプレート（共通レイアウトは base.html）
 ├── migrations/               # Alembic のマイグレーション
