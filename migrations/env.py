@@ -5,6 +5,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import get_settings
 from app.db import Base
+from app.partners import models as partner_models  # noqa: F401  テーブル定義を読み込む
 
 config = context.config
 
