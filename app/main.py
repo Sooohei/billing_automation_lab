@@ -18,7 +18,7 @@ def create_app() -> FastAPI:
 
     install_error_handlers(app)
     # ミドルウェアは後に登録したものが先に動く。認証 → CSRF の順にする
-    install_csrf(app, settings.app_origin)
+    install_csrf(app, settings.app_origins)
     install_auth(app, settings)
 
     app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")

@@ -71,7 +71,8 @@
 
 保存・申請・削除などの POST は、別のサイトから勝手に送らせる攻撃（CSRF）を防ぐため、`Origin` ヘッダーを確認する（ユーザー確認済み）。
 
-- POST のリクエストで、`Origin` ヘッダーが `APP_ORIGIN` と一致しない、または `Origin` ヘッダーがない場合は、403 で拒否する
+- POST のリクエストで、`Origin` ヘッダーが `APP_ORIGIN` のどれとも一致しない、または `Origin` ヘッダーがない場合は、403 で拒否する
+- `APP_ORIGIN` にはカンマ区切りで複数のオリジンを書ける。ローカルでは、ブラウザで `http://localhost:8000` と `http://127.0.0.1:8000` のどちらで開いても使えるよう、両方を書く（ブラウザはこの 2 つを別のオリジンとして扱うため）
 - すべての POST に共通の処理（FastAPI のミドルウェア）で行う
 - GET では状態を変えない。ただし SR-03 の確認・修正画面は、開いたときに支払い依頼インプットを作る（要件 14）。これは同じ請求書に 1 回だけ初期値で作るもので、利用者の入力を書き換えないため、GET のままとする
 
@@ -138,7 +139,7 @@ flowchart LR
 |----------|------|--------------|
 | `DATABASE_URL` | DB の接続先 | `postgresql+psycopg://app:app@localhost:5432/billing` |
 | `TEST_DATABASE_URL` | テスト用の DB の接続先 | `postgresql+psycopg://app:app@localhost:5432/billing_test` |
-| `APP_ORIGIN` | Web アプリのオリジン（CSRF 対策で `Origin` ヘッダーと比べる） | `http://localhost:8000` |
+| `APP_ORIGIN` | Web アプリのオリジン（CSRF 対策で `Origin` ヘッダーと比べる）。カンマ区切りで複数を書ける | `http://localhost:8000,http://127.0.0.1:8000` |
 | `AUTH_MODE` | 認証方式の切替。ローカルは `dev`、Google Cloud は `iap` | `dev` |
 | `GMAIL_TOKEN_FILE` | Gmail の認証情報（OAuth クライアントとリフレッシュトークン）のファイルの場所。Gmail との外部連携（第 2 段階）から使う | `.local/gmail_token.json` |
 | `STORAGE_BACKEND` | ファイル保存先の切替。`local` または `gcs` | `local` |

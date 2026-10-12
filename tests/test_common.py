@@ -4,9 +4,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.config import Settings
 from app.main import create_app
-
-ORIGIN = "http://localhost:8000"
 
 
 @pytest.fixture
@@ -53,8 +52,11 @@ def test_想定外のエラーは500の画面を表示し詳細を出さない(t
     assert "テスト用のエラー" not in response.text
 
 
-def test_OriginヘッダーがAPP_ORIGINと一致するPOSTは受け付ける(test_client: TestClient) -> None:
-    response = test_client.post("/test/post", headers={"Origin": ORIGIN})
+@pytest.mark.parametrize("origin", ["http://localhost:8000", "http://127.0.0.1:8000"])
+def test_OriginヘッダーがAPP_ORIGINのどれかと一致するPOSTは受け付ける(
+    test_client: TestClient, origin: str
+) -> None:
+    response = test_client.post("/test/post", headers={"Origin": origin})
 
     assert response.status_code == 200
 
@@ -78,3 +80,12 @@ def test_トップを開くと請求書一覧へ移る(test_client: TestClient) 
 
     assert response.status_code == 307
     assert response.headers["location"] == "/invoices"
+
+
+def test_APP_ORIGINはカンマ区切りで複数を書ける() -> None:
+    settings = Settings(
+        database_url="postgresql+psycopg://x",
+        app_origin="http://localhost:8000, http://127.0.0.1:8000,",
+    )
+
+    assert settings.app_origins == {"http://localhost:8000", "http://127.0.0.1:8000"}
