@@ -14,6 +14,7 @@ Gmail からの請求書自動取込・蓄積、支払い依頼内容の自動�
 | [全体構成](./docs/design/architecture.md) | 全 SR 共通の技術スタック、Google Cloud・ローカルの構成、認証 |
 | [SR-00 取引先管理 設計](./docs/design/sr-00_partner_management.md) | 取引先管理のデータモデル、入力チェック、画面 |
 | [SR-01 Gmail からの請求書取込・蓄積 設計](./docs/design/sr-01_gmail_invoice_ingest.md) | 取込対象の判定、取込の流れ、Gmail への接続 |
+| [SR-02 請求書からの必要項目の自動出力 設計](./docs/design/sr-02_invoice_field_extraction.md) | 1 時間ごとのバッチ、Gemini による読み取り、形式チェック |
 
 ## スコープ（要約）
 

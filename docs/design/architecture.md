@@ -34,12 +34,14 @@ flowchart LR
     Job --> SQL
     Job --> GCS
     Job --> Gmail[Gmail API]
+    Job --> Gemini[Vertex AI<br>Gemini]
     Run -.-> Secret[Secret Manager]
     Job -.-> Secret
 ```
 
 - Web アプリ（SR-00、SR-03 の画面）は Cloud Run のサービス 1 つとして動かす。利用者のアクセスは IAP を通す（[認証](#認証)）
-- SR-01・SR-02 の定期処理は Cloud Run Jobs と Cloud Scheduler で動かす（SR-01 は [SR-01 の設計](./sr-01_gmail_invoice_ingest.md)、SR-02 は SR-02 の設計で決める）
+- SR-01 の取込と SR-02 の抽出は、1 時間ごとの 1 つのバッチとして Cloud Run Jobs と Cloud Scheduler で動かす（[SR-02 の設計](./sr-02_invoice_field_extraction.md#1-時間ごとのバッチ)）
+- 請求書 PDF からの項目の読み取りには、Vertex AI の Gemini を使う（[SR-02 の設計](./sr-02_invoice_field_extraction.md)）
 - Cloud Run から Cloud SQL へは Cloud SQL Auth Proxy（Cloud Run の Cloud SQL 接続設定）で接続する
 - 請求書ファイル（PDF）は Cloud Storage に保存する（[ファイル保存](#ファイル保存)）
 - 秘匿情報（DB のパスワード、Gmail の認証情報、将来の freee の認証情報）は Secret Manager に置き、環境変数またはファイルとしてアプリに渡す
@@ -57,11 +59,13 @@ flowchart LR
     App --> Sample[サンプルデータ<br>sample_data/]
     Batch --> Sample
     Batch -.-> Gmail[Gmail API<br>第 2 段階で実装]
+    Batch -.-> Gemini[Vertex AI Gemini<br>第 2 段階で実装]
 ```
 
 - PostgreSQL は `docker compose` で起動する
 - アプリは `uvicorn` で起動する。取込・抽出バッチはコマンドで手動実行する
 - Gmail は、最終的には実際の Gmail に接続する。実装は、サンプルのメールを返す形を先に作り、Gmail API との連携を後から作る（[Gmail 連携](#gmail-連携)）
+- 請求書 PDF からの項目の読み取りも同じく、サンプルの結果を返す形を先に作り、Vertex AI の Gemini との連携を後から作る（[SR-02 の設計](./sr-02_invoice_field_extraction.md)）
 - 秘匿情報は `.env` と `.local/`（どちらも Git 管理外）に置く。`.env.example` に項目だけを記載する
 
 ## 設定値
@@ -78,6 +82,9 @@ flowchart LR
 | `LOCAL_STORAGE_DIR` | `STORAGE_BACKEND=local` のときの保存先フォルダ | `.local/storage` |
 | `GCS_BUCKET` | `STORAGE_BACKEND=gcs` のときのバケット名 | （ローカルでは使わない） |
 | `INGEST_START_DATE` | SR-01 の運用開始日（`YYYY-MM-DD`、日本時間） | `2026-10-01` |
+| `GOOGLE_CLOUD_PROJECT` | Vertex AI を呼ぶ Google Cloud プロジェクト。Gemini との連携（第 2 段階）から使う | （要確認） |
+| `VERTEX_AI_LOCATION` | Vertex AI のロケーション。第 2 段階から使う | （要確認） |
+| `GEMINI_MODEL` | 使う Gemini のモデル名。第 2 段階から使う | （要確認） |
 
 ## freee 連携
 
@@ -183,13 +190,20 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   │   ├── models.py         # テーブル定義
 │   │   ├── repository.py     # InvoiceRepository
 │   │   └── ingest.py         # 取込処理
+│   ├── extraction/           # SR-02
+│   │   ├── models.py         # テーブル定義
+│   │   ├── repository.py     # ExtractionRepository
+│   │   ├── extractor.py      # InvoiceExtractor（第 1 段階はサンプル、第 2 段階で Gemini）
+│   │   ├── validation.py     # 読み取った値の形式チェック
+│   │   └── extract.py        # 抽出処理
 │   ├── jobs/
-│   │   └── ingest.py         # 取込バッチの起動口（Cloud Run Jobs・ローカルのコマンド）
+│   │   └── hourly.py         # 1 時間ごとのバッチ（SR-01 の取込 → SR-02 の抽出）の起動口
 │   └── templates/            # Jinja2 テンプレート
 ├── migrations/               # Alembic のマイグレーション
 ├── sample_data/
 │   ├── freee/                # freee のサンプルデータ（JSON）
-│   └── gmail/                # Gmail のサンプルのメール（.eml、第 1 段階）
+│   ├── gmail/                # Gmail のサンプルのメール（.eml、第 1 段階）
+│   └── extraction/           # 読み取り結果のサンプル（JSON、第 1 段階）
 ├── tests/
 ├── docker-compose.yml
 └── .env.example
@@ -212,6 +226,7 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 | 請求書を受け取る Gmail アカウント（個人の @gmail.com を使う方針） | 未決。設定作業の前に確認する |
 | Gmail API 用の OAuth クライアント（種類はデスクトップ アプリ）と同意画面（「テスト中」のまま使う方針） | 未決。設定作業の前に確認する |
 | 請求書ファイルを置く Cloud Storage のバケット名・ロケーション | 未決。設定作業の前に確認する |
-| 取込バッチの Cloud Run Jobs のジョブ名・Cloud Scheduler の設定 | 未決。設定作業の前に確認する |
+| 1 時間ごとのバッチの Cloud Run Jobs のジョブ名・Cloud Scheduler の設定 | 未決。設定作業の前に確認する |
+| Vertex AI のロケーション・使う Gemini のモデル | 未決。設定作業の前に確認する |
 | Secret Manager のシークレット名（DB のパスワード、Gmail の認証情報） | 未決。設定作業の前に確認する |
 | 取込のエラーの通知先（Cloud Monitoring のアラートを使うか） | 未決。設定作業の前に確認する |

@@ -111,33 +111,30 @@ OAuth 同意画面は「テスト中」のまま使うため、リフレッシ�
 
 ## 取込の流れ
 
-`app/jobs/ingest.py` から `app/invoices/ingest.py` の取込処理を呼ぶ。
+1 時間ごとのバッチ（`app/jobs/hourly.py`）が、DB の advisory lock を取ったうえで `app/invoices/ingest.py` の取込処理を呼ぶ。バッチの全体（取込のあとに SR-02 の抽出を行うこと、ロック）は [SR-02 の設計](./sr-02_invoice_field_extraction.md#1-時間ごとのバッチ) を参照。
 
-1. DB の advisory lock（`pg_try_advisory_lock`）を取る。取れなければ、前回の取込がまだ動いているので何もせずに終わる
-2. SR-00 の `list_active_emails()` で、有効な取引先の送信元メールアドレスを取る。1 件もなければ終わる
-3. `GmailClient.list_message_ids(運用開始日, 送信元メールアドレスの一覧)` で候補のメールの ID を取る
-4. 候補のうち `ingested_messages` にないものについて、1 通ずつ次の 5〜8 を行う
-5. `GmailClient.get_message` でメールを取り、[取込対象の判定](#取込対象の判定) をする。対象でなければ次のメールへ
-6. PDF の添付ファイルごとに SHA-256 を計算する。同じメールの中で同じ中身のものは 1 件にまとめる。`invoices` に同じ `file_sha256` があるものは除く
-7. 残った PDF を `FileStorage.save("invoices/{file_sha256}.pdf", data)` で保存する
-8. 1 トランザクションで、残った PDF ごとに `invoices` に 1 行を追加し、`ingested_messages` にメールを記録する
-9. すべてのメールを処理したら、advisory lock を外す
+1. SR-00 の `list_active_emails()` で、有効な取引先の送信元メールアドレスを取る。1 件もなければ終わる
+2. `GmailClient.list_message_ids(運用開始日, 送信元メールアドレスの一覧)` で候補のメールの ID を取る
+3. 候補のうち `ingested_messages` にないものについて、1 通ずつ次の 4〜7 を行う
+4. `GmailClient.get_message` でメールを取り、[取込対象の判定](#取込対象の判定) をする。対象でなければ次のメールへ
+5. PDF の添付ファイルごとに SHA-256 を計算する。同じメールの中で同じ中身のものは 1 件にまとめる。`invoices` に同じ `file_sha256` があるものは除く
+6. 残った PDF を `FileStorage.save("invoices/{file_sha256}.pdf", data)` で保存する
+7. 1 トランザクションで、残った PDF ごとに `invoices` に 1 行を追加し、`ingested_messages` にメールを記録する
 
-- 7 の保存先は中身の SHA-256 で決まる。そのため、7 のあと 8 の前に失敗して次回やり直しても、同じ場所に同じ中身を上書きするだけで、ファイルが重複しない
-- SR-02 は「SR-01 の取込が終わるたびに」動く。取込の後に SR-02 を呼ぶ方法は SR-02 の設計で決める
+- 6 の保存先は中身の SHA-256 で決まる。そのため、6 のあと 7 の前に失敗して次回やり直しても、同じ場所に同じ中身を上書きするだけで、ファイルが重複しない
 
 ## 重複の判定
 
 - 要件 4 の「内容が完全に同じ PDF ファイル」は、PDF の中身のバイト列の SHA-256 が一致することで判定する
 - ファイル名・送信元・メールが違っても、中身が同じなら重複として扱う
-- 取込の流れの 6 で判定し、`uq_invoices_file_sha256` でも防ぐ
+- 取込の流れの 5 で判定し、`uq_invoices_file_sha256` でも防ぐ
 
 ## エラー時の動き
 
 | エラー | 動き |
 |--------|------|
 | 1 通のメールの処理中のエラー（添付ファイルの取得失敗、保存失敗、DB エラーなど） | そのメールのトランザクションを取り消し、エラーをログに出して次のメールへ進む。`ingested_messages` に記録しないので、次回の取込で再度取り込む（要件 5） |
-| Gmail の認証のエラー（リフレッシュトークンの失効など） | 取込全体を止め、「Gmail の接続許可が切れています。接続許可を取り直してください」とエラーをログに出す。ジョブは失敗として終わる |
+| Gmail の認証のエラー（リフレッシュトークンの失効など） | 取込全体を止め、「Gmail の接続許可が切れています。接続許可を取り直してください」とエラーをログに出す。続く SR-02 の抽出は行い、ジョブは最後に失敗として終わる |
 | Gmail API の一時的なエラー（レート制限、5xx） | Google のクライアントライブラリの再試行に任せる。それでも失敗した場合は、上の 1 通のメールの処理中のエラーと同じに扱う（一覧の取得で失敗した場合は取込全体を止める） |
 
 - ログは標準出力に出す。Google Cloud 上では Cloud Logging に集まる
@@ -147,8 +144,8 @@ OAuth 同意画面は「テスト中」のまま使うため、リフレッシ�
 
 | 環境 | 起動方法 |
 |------|----------|
-| Google Cloud | Cloud Scheduler が 1 時間ごとに Cloud Run Jobs のジョブを起動する。ジョブは `python -m app.jobs.ingest` を実行する |
-| ローカル | `python -m app.jobs.ingest` を手動で実行する |
+| Google Cloud | Cloud Scheduler が 1 時間ごとに Cloud Run Jobs のジョブを起動する。ジョブは `python -m app.jobs.hourly` を実行する |
+| ローカル | `python -m app.jobs.hourly` を手動で実行する |
 
 ## 制約
 
@@ -161,7 +158,7 @@ OAuth 同意画面は「テスト中」のまま使うため、リフレッシ�
 
 1. [SR-00 のローカルでの試し方](./sr-00_partner_management.md#ローカルでの試し方) の 1〜3 を行う
 2. SR-00 の画面で、サンプルのメールの送信元メールアドレスを持つ取引先を登録する
-3. `python -m app.jobs.ingest` を実行する
+3. `python -m app.jobs.hourly` を実行する
 4. `invoices` の行と `.local/storage/invoices/` のファイルができていることを確認する
 
 サンプルのメールは `sample_data/gmail/` に置く。次の場合を確かめられるように用意する。
@@ -181,7 +178,7 @@ OAuth 同意画面は「テスト中」のまま使うため、リフレッシ�
 
 1. Gmail API 用の OAuth クライアントを作り（Google Cloud の設定のため、作業前に確認する）、`python -m app.gmail.authorize` で `.local/gmail_token.json` を作る
 2. 受信用の Gmail アカウントに、登録済みの送信元から PDF 付きのメールを送る
-3. `python -m app.jobs.ingest` を実行する
+3. `python -m app.jobs.hourly` を実行する
 
 ## テスト観点
 
@@ -193,7 +190,7 @@ OAuth 同意画面は「テスト中」のまま使うため、リフレッシ�
 | 請求書データの作成 | PDF 1 件ごとに 1 件作られ、Output の項目がすべて入ること |
 | 重複 | 同じ中身の PDF が、同じメール内・別のメールのどちらでも 1 件しか作られないこと |
 | 再取込 | 取込済みのメールが再度取り込まれないこと。処理中にエラーになったメールが次回取り込まれること |
-| 同時実行 | advisory lock が取れないときに何もせず終わること |
+| 同時実行 | バッチが advisory lock を取れないときに何もせず終わること |
 | 認証エラー | Gmail の認証エラーで取込全体が止まり、エラーがログに出ること |
 
 自動テストでは、`GmailClient` を、テストごとにメールを返すテスト用の偽物に差し替える。
