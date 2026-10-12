@@ -16,7 +16,7 @@ class CurrentUser:
 def install_auth(app: FastAPI, settings: Settings) -> None:
     """すべてのリクエストで利用者を特定し、request.state.user に入れる。"""
     if settings.auth_mode != "dev":
-        # IAP の JWT の検証は、Google Cloud に載せる段階で実装する
+        # IAP の JWT の検証は、Google Cloud にデプロイする場合の想定。本リポジトリでは実装しない
         raise RuntimeError(f"AUTH_MODE={settings.auth_mode} は未実装です")
 
     @app.middleware("http")

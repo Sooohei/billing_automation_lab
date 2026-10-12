@@ -20,10 +20,9 @@ class RawExtraction:
 
 
 class InvoiceExtractor:
-    """請求書ファイルからの抽出項目の読み取り。
+    """請求書ファイルからの抽出項目の読み取り。sample_data/extraction/{PDF の SHA-256}.json を返す。
 
-    第 1 段階: sample_data/extraction/{PDF の SHA-256}.json を返す（現在の実装）。
-    第 2 段階: Vertex AI の Gemini で読み取る形に置き換える。メソッドの形は変えない。
+    Gemini で読み取る場合は、このクラスの中身を置き換える（メソッドの形は変えない）。
     """
 
     def __init__(self, sample_dir: Path = DEFAULT_SAMPLE_DIR) -> None:

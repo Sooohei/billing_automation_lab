@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ message }}{% endblock %}
 {% block content %}
-  <p>{{ message }}</p>
-  {% if show_home_link %}<p><a href="/invoices">請求書一覧へ</a></p>{% endif %}
+  <div class="card error-page">
+    <p class="error-code">{{ status_code }}</p>
+    <p>{{ message }}</p>
+    {% if show_home_link %}<a class="btn btn-primary" href="/invoices">請求書一覧へ</a>{% endif %}
+  </div>
 {% endblock %}

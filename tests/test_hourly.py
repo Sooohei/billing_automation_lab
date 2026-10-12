@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from app.extraction.extractor import RawExtraction
 from app.extraction.models import ExtractionResult
-from app.gmail.client import GmailAuthError
 from app.invoices.models import Invoice
 from app.jobs.hourly import ADVISORY_LOCK_KEY, run_hourly
 from app.storage.local import LocalFileStorage
@@ -144,7 +143,7 @@ def test_取込全体が止まっても抽出を行い失敗を返す(
     session.add(invoice)
     session.commit()
     gmail = FakeGmailClient([])
-    gmail.list_error = GmailAuthError("invalid_grant")
+    gmail.list_error = RuntimeError("一覧を取得できない")
 
     assert run_hourly(engine, gmail, FakeInvoiceExtractor(), storage, START_DATE, NOW) is False
     assert extraction_count(session) == 1

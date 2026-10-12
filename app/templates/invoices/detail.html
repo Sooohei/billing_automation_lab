@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}請求書の確認・修正{% endblock %}
+{% block main_class %} wide{% endblock %}
+{% block content %}
+  <a class="back-link" href="/invoices">← 請求書一覧へ</a>
+  <div class="page-header">
+    <div>
+      <h1>請求書の確認・修正 <span class="badge badge-{{ payment_input.status }}">{{ status_labels[payment_input.status] }}</span></h1>
+      <p class="invoice-meta">
+        <span>{{ invoice.file_name }}</span>
+        <span>受信日時 {{ invoice.received_at | jst }}</span>
+        <span>{{ invoice.sender_email }}</span>
+      </p>
+    </div>
+  </div>
+  {% if message %}<p class="alert alert-success">{{ message }}</p>{% endif %}
+  {% if errors %}
+    <ul class="errors">
+      {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  <div class="detail">
+    <div class="file card">
+      <iframe src="/invoices/{{ invoice.id }}/file" title="請求書ファイル"></iframe>
+    </div>
+
+    <div class="input">
+      {% if payment_input.is_submitted %}
+        {% include "invoices/_detail_submitted.html" %}
+      {% else %}
+        {% include "invoices/_detail_form.html" %}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

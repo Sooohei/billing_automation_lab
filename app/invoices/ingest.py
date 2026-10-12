@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
-from app.gmail.client import Attachment, GmailAuthError, GmailClient, GmailMessage
+from app.gmail.client import Attachment, GmailClient, GmailMessage
 from app.invoices.models import Invoice
 from app.invoices.repository import InvoiceRepository
 from app.partners.normalize import normalize_email
@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 JST = ZoneInfo("Asia/Tokyo")
 # 取込を実行する日の何日前の日以降に受信したメールを取り込むか
 LOOKBACK_DAYS = 60
-GMAIL_AUTH_ERROR_MESSAGE = "Gmail の接続許可が切れています。接続許可を取り直してください"
 
 
 @dataclass
@@ -29,7 +28,7 @@ class IngestResult:
     created_invoice_count: int = 0
     ingested_message_count: int = 0
     failed_message_ids: list[str] = field(default_factory=list)
-    # 取込全体を止めた（Gmail の認証のエラー、メールの一覧の取得の失敗）
+    # 取込全体を止めた（メールの一覧の取得の失敗）
     aborted: bool = False
 
     @property
@@ -64,10 +63,6 @@ def ingest(
 
     try:
         message_ids = gmail_client.list_message_ids(received_after, senders)
-    except GmailAuthError:
-        logger.exception(GMAIL_AUTH_ERROR_MESSAGE)
-        result.aborted = True
-        return result
     except Exception:
         logger.exception("メールの一覧を取得できなかったため、取込を止めます")
         result.aborted = True
@@ -85,11 +80,6 @@ def ingest(
             created = _ingest_message(
                 session, gmail_client, storage, message_id, received_after, sender_set
             )
-        except GmailAuthError:
-            session.rollback()
-            logger.exception(GMAIL_AUTH_ERROR_MESSAGE)
-            result.aborted = True
-            return result
         except Exception:
             # このメールは取込済みとして記録しないので、次回の取込で再度取り込む
             session.rollback()

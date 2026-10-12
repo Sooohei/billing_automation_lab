@@ -1,0 +1,12 @@
+[
+  {"id": 5001, "application_number": "A-0001", "title": "2026年10月 媒体費 Aメディア", "amount": 1100000, "application_date": "2026-09-20", "status": "approved", "deal_created": false, "manual_journal_created": false, "child_request_count": 0},
+  {"id": 5002, "application_number": "A-0002", "title": "2026年10月 媒体費 Bネットワークス", "amount": 682000, "application_date": "2026-09-21", "status": "approved", "deal_created": false, "manual_journal_created": false, "child_request_count": 0},
+  {"id": 5003, "application_number": "A-0003", "title": "2026年10月 媒体費 Cアド", "amount": 330000, "application_date": "2026-09-22", "status": "approved", "deal_created": false, "manual_journal_created": false, "child_request_count": 0},
+  {"id": 5004, "application_number": "A-0004", "title": "2026年10月 媒体費 Dパブリッシング", "amount": 880000, "application_date": "2026-09-25", "status": "approved", "deal_created": false, "manual_journal_created": false, "child_request_count": 0},
+  {"id": 5010, "application_number": "A-0010", "title": "2026年下期 媒体費 まとめ枠", "amount": 5000000, "application_date": "2026-09-01", "status": "approved", "deal_created": false, "manual_journal_created": false, "child_request_count": 14},
+  {"id": 5005, "application_number": "A-0005", "title": "2026年11月 媒体費 Aメディア", "amount": 1100000, "application_date": "2026-10-05", "status": "in_progress", "deal_created": false, "manual_journal_created": false, "child_request_count": 0},
+  {"id": 5006, "application_number": "A-0006", "title": "2026年10月 出張交通費", "amount": 45000, "application_date": "2026-09-28", "status": "approved", "deal_created": false, "manual_journal_created": false, "child_request_count": 0},
+  {"id": 5007, "application_number": "A-0007", "title": "2026年9月 媒体費 Aメディア", "amount": 990000, "application_date": "2026-08-20", "status": "approved", "deal_created": true, "manual_journal_created": false, "child_request_count": 0},
+  {"id": 5008, "application_number": "A-0008", "title": "2026年9月 媒体費 Bネットワークス", "amount": 600000, "application_date": "2026-08-21", "status": "approved", "deal_created": false, "manual_journal_created": true, "child_request_count": 0},
+  {"id": 5009, "application_number": "A-0009", "title": "2026年上期 媒体費 まとめ枠", "amount": 5000000, "application_date": "2026-03-01", "status": "approved", "deal_created": false, "manual_journal_created": false, "child_request_count": 15}
+]

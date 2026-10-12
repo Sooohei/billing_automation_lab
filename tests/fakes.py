@@ -1,12 +1,30 @@
-from datetime import datetime
+from datetime import date, datetime
 
+from app.auth import CurrentUser
 from app.extraction.extractor import InvoiceExtractor, RawExtraction
-from app.freee.client import FreeeOption
+from app.freee.client import ApprovalRequest, FreeeError, FreeeOption, PaymentRequestParams
 from app.gmail.client import GmailClient, GmailMessage
 
 
 class FakeFreeeClient:
     """テスト用の FreeeClient。"""
+
+    def __init__(self) -> None:
+        self.approval_requests = [
+            ApprovalRequest(
+                5001, "A-0001", "2026年10月 媒体費 Aメディア", 1_100_000, date(2026, 9, 20)
+            ),
+            ApprovalRequest(
+                5002, "A-0002", "2026年10月 媒体費 Bネット", 682_000, date(2026, 9, 21)
+            ),
+        ]
+        # 各メソッドで起こすエラー
+        self.list_approval_requests_error: FreeeError | None = None
+        self.upload_receipt_error: FreeeError | None = None
+        self.create_payment_request_error: FreeeError | None = None
+        # 呼び出しの記録
+        self.uploaded: list[tuple[CurrentUser, bytes, str]] = []
+        self.created: list[tuple[CurrentUser, PaymentRequestParams]] = []
 
     def list_partners(self) -> list[FreeeOption]:
         return [FreeeOption(101, "株式会社Aメディア"), FreeeOption(102, "株式会社Bネットワークス")]
@@ -19,6 +37,23 @@ class FakeFreeeClient:
 
     def list_approval_flow_routes(self) -> list[FreeeOption]:
         return [FreeeOption(301, "媒体費（部長承認）"), FreeeOption(302, "媒体費（役員承認）")]
+
+    def list_approval_requests(self, user: CurrentUser) -> list[ApprovalRequest]:
+        if self.list_approval_requests_error is not None:
+            raise self.list_approval_requests_error
+        return self.approval_requests
+
+    def upload_receipt(self, user: CurrentUser, pdf: bytes, file_name: str) -> int:
+        if self.upload_receipt_error is not None:
+            raise self.upload_receipt_error
+        self.uploaded.append((user, pdf, file_name))
+        return 7000 + len(self.uploaded)
+
+    def create_payment_request(self, user: CurrentUser, params: PaymentRequestParams) -> int:
+        if self.create_payment_request_error is not None:
+            raise self.create_payment_request_error
+        self.created.append((user, params))
+        return 9000 + len(self.created)
 
 
 class FakeGmailClient(GmailClient):

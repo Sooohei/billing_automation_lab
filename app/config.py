@@ -13,6 +13,7 @@ class Settings(BaseSettings):
 
     database_url: str
     test_database_url: str | None = None
+    # Web アプリのオリジン。カンマ区切りで複数を書ける（例: localhost と 127.0.0.1）
     app_origin: str
     auth_mode: Literal["dev", "iap"] = "dev"
     storage_backend: Literal["local", "gcs"] = "local"
@@ -20,6 +21,10 @@ class Settings(BaseSettings):
     gcs_bucket: str | None = None
     # SR-01 の運用開始日（日本時間）。1 時間ごとのバッチで使う
     ingest_start_date: date | None = None
+
+    @property
+    def app_origins(self) -> set[str]:
+        return {origin.strip() for origin in self.app_origin.split(",") if origin.strip()}
 
 
 @lru_cache

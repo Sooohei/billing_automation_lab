@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from alembic import command
@@ -11,6 +12,8 @@ from app.config import get_settings
 from app.db import Base, get_session
 from app.freee.dependencies import get_freee_client
 from app.main import create_app
+from app.storage.dependencies import get_file_storage
+from app.storage.local import LocalFileStorage
 from tests.fakes import FakeFreeeClient
 
 
@@ -43,9 +46,22 @@ def session(engine: Engine) -> Iterator[Session]:
 
 
 @pytest.fixture
-def client(session: Session) -> Iterator[TestClient]:
+def freee_client() -> FakeFreeeClient:
+    return FakeFreeeClient()
+
+
+@pytest.fixture
+def file_storage(tmp_path: Path) -> LocalFileStorage:
+    return LocalFileStorage(tmp_path / "storage")
+
+
+@pytest.fixture
+def client(
+    session: Session, freee_client: FakeFreeeClient, file_storage: LocalFileStorage
+) -> Iterator[TestClient]:
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
-    app.dependency_overrides[get_freee_client] = FakeFreeeClient
+    app.dependency_overrides[get_freee_client] = lambda: freee_client
+    app.dependency_overrides[get_file_storage] = lambda: file_storage
     with TestClient(app) as client:
         yield client

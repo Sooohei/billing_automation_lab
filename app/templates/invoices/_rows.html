@@ -1,0 +1,18 @@
+{% for row in rows %}
+  <tr>
+    <td class="nowrap muted">{{ row.received_at | jst }}</td>
+    <td>{% if row.partner_name %}{{ row.partner_name }}{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td class="amount">{{ row.amount_including_tax | yen }}</td>
+    <td class="nowrap">{{ row.due_date or "" }}</td>
+    <td><span class="badge badge-{{ row.status.value }}">{{ status_labels[row.status] }}</span></td>
+    <td class="actions"><a class="btn btn-small" href="/invoices/{{ row.invoice_id }}">確認・修正</a></td>
+  </tr>
+{% endfor %}
+{% if has_more %}
+  <tr id="more-rows" class="more-row">
+    <td colspan="6">
+      {# 押すと、このボタンの行を次の 10 件の行（と次のボタン）に置き換える #}
+      <button type="button" hx-get="{{ next_url }}" hx-target="#more-rows" hx-swap="outerHTML">次の 10 件を表示</button>
+    </td>
+  </tr>
+{% endif %}

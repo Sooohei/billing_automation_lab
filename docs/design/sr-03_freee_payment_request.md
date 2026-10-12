@@ -286,13 +286,14 @@
 非機能要件「一覧・詳細の表示はいずれも 3 秒以内（事前申請の取得を含む）」への対応:
 
 - 一覧は、請求書データが毎月 60 件程度（1 年で 720 件程度）なので、1 回の SQL で絞り込み・並び替え・10 件の取得をする。`invoices.received_at` にインデックスを付ける
-- 確認・修正画面は、`list_approval_requests` にタイムアウト（2 秒）を設ける。タイムアウトしたら取得の失敗として扱い（要件 6）、画面は 3 秒以内に表示する
-- `upload_receipt`・`create_payment_request` のタイムアウトは 30 秒とする（申請は表示ではないため、3 秒の対象外とする）
-- Google Cloud 上では、しばらく使われなかった後の最初の表示が 3 秒を超えることがある（[全体構成の制約](./architecture.md#制約)）
+- 本リポジトリでは freee と通信しない（`SampleFreeeClient` はサンプルの JSON を読むだけ）ので、freee の応答を待つ時間はない。freee に実接続する場合は、次のタイムアウトを設ける想定とする
+  - `list_approval_requests` は 2 秒。タイムアウトしたら取得の失敗として扱い（要件 6）、画面は 3 秒以内に表示する
+  - `upload_receipt`・`create_payment_request` は 30 秒（申請は表示ではないため、3 秒の対象外とする）
+- Google Cloud にデプロイする場合は、しばらく使われなかった後の最初の表示が 3 秒を超えることがある（[全体構成の制約](./architecture.md#制約)）
 
 ## ローカルでの試し方
 
-1. [SR-02 のローカルでの試し方](./sr-02_invoice_field_extraction.md#第-1-段階サンプルの読み取り結果) を行い、請求書データと抽出結果を作る
+1. [SR-02 のローカルでの試し方](./sr-02_invoice_field_extraction.md#ローカルでの試し方) を行い、請求書データと抽出結果を作る
 2. `sample_data/freee/approval_requests.json` に事前申請のサンプルを置く
 3. `uvicorn app.main:app --reload` でアプリを起動し、`http://localhost:8000/invoices` を開く
 
