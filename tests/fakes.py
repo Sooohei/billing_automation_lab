@@ -1,4 +1,7 @@
+from datetime import datetime
+
 from app.freee.client import FreeeOption
+from app.gmail.client import GmailClient, GmailMessage
 
 
 class FakeFreeeClient:
@@ -15,3 +18,25 @@ class FakeFreeeClient:
 
     def list_approval_flow_routes(self) -> list[FreeeOption]:
         return [FreeeOption(301, "媒体費（部長承認）"), FreeeOption(302, "媒体費（役員承認）")]
+
+
+class FakeGmailClient(GmailClient):
+    """テスト用の GmailClient。テストごとに渡したメールを返す。"""
+
+    def __init__(self, messages: list[GmailMessage]) -> None:
+        self.messages = {message.message_id: message for message in messages}
+        # メールの ID ごとに、get_message で起こすエラー
+        self.errors: dict[str, Exception] = {}
+        self.list_error: Exception | None = None
+        self.fetched_ids: list[str] = []
+
+    def list_message_ids(self, received_after: datetime, senders: list[str]) -> list[str]:
+        if self.list_error is not None:
+            raise self.list_error
+        return list(self.messages)
+
+    def get_message(self, message_id: str) -> GmailMessage:
+        self.fetched_ids.append(message_id)
+        if message_id in self.errors:
+            raise self.errors.pop(message_id)
+        return self.messages[message_id]

@@ -53,7 +53,7 @@
 | 日時（受信日時、取込日時、申請日時など） | DB には `timestamptz` で持つ（UTC で保存される） |
 | 日付（請求書発行日、支払期日など） | DB には `date` で持つ。時差を考えない |
 | 画面の表示 | 日時は日本時間（`Asia/Tokyo`）で `YYYY-MM-DD HH:MM` と表示する |
-| 日付の判定 | 運用開始日（SR-01）、申請月（SR-03）、受信日時の絞り込み（SR-03）など、日付で区切る判定はすべて日本時間で行う |
+| 日付の判定 | 運用開始日・60 日前の日（SR-01）、申請月（SR-03）、受信日時の絞り込み（SR-03）など、日付で区切る判定はすべて日本時間で行う |
 
 ## 画面の共通部分
 
@@ -252,7 +252,8 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   ├── storage/
 │   │   ├── storage.py        # FileStorage インターフェース
 │   │   ├── local.py          # LocalFileStorage
-│   │   └── gcs.py            # GcsFileStorage
+│   │   ├── gcs.py            # GcsFileStorage
+│   │   └── dependencies.py   # STORAGE_BACKEND に応じた FileStorage を作る
 │   ├── partners/             # SR-00
 │   │   ├── models.py         # テーブル定義
 │   │   ├── normalize.py      # 取引先名・送信元メールアドレスの正規化
@@ -284,6 +285,8 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 │   ├── freee/                # freee のサンプルデータ（JSON）
 │   ├── gmail/                # Gmail のサンプルのメール（.eml、第 1 段階）
 │   └── extraction/           # 読み取り結果のサンプル（JSON、第 1 段階）
+├── scripts/
+│   └── generate_gmail_samples.py  # sample_data/gmail/ のサンプルのメールを作り直す
 ├── tests/
 ├── docker/
 │   └── postgres-init/        # PostgreSQL の初回起動時にテスト用の DB を作る SQL

@@ -1,0 +1,27 @@
+From: =?utf-8?b?5qCq5byP5Lya56S+QeODoeODh+OCo+OCoiDoq4vmsYLmi4XlvZM=?=
+ <billing@a-media.jp>
+To: invoices@example.com
+Subject: =?utf-8?b?MjAyNuW5tDEw5pyI5YiGIOaOsui8ieaYjue0sA==?=
+Date: Thu, 08 Oct 2026 11:00:00 +0900
+Message-ID: <sample-04-non-pdf-only@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+ boundary="sample-boundary-sample-04-non-pdf-only"
+
+--sample-boundary-sample-04-non-pdf-only
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+6KuL5rGC5pu444KS5re75LuY44GE44Gf44GX44G+44GZ44CC44GU56K66KqN44Gu44G744Gp44KI
+44KN44GX44GP44GK6aGY44GE44GE44Gf44GX44G+44GZ44CCCg==
+
+--sample-boundary-sample-04-non-pdf-only
+Content-Type: text/csv
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment;
+ filename*=utf-8''%E6%8E%B2%E8%BC%89%E6%98%8E%E7%B4%B0_202610.csv
+MIME-Version: 1.0
+
+5aqS5L2TLOmHkemhjQrjg5Djg4rjg7wsMTAwMDAwMAo=
+
+--sample-boundary-sample-04-non-pdf-only--
