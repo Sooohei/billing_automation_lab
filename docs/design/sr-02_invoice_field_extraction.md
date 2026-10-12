@@ -86,7 +86,7 @@ Gmail と同じく（[全体構成](./architecture.md#gmail-連携)）、`Invoic
 
 | 段階 | `extract` の中身 |
 |------|------------------|
-| 第 1 段階 | `sample_data/extraction/{ファイル名}.json` を読んで返す。ファイルがなければ、すべての項目を None で返す |
+| 第 1 段階 | 渡された PDF の SHA-256 を計算し、`sample_data/extraction/{SHA-256}.json` を読んで返す。ファイルがなければ、すべての項目を None で返す。別々の請求書が同じファイル名で届くことがあるため、ファイル名ではなく中身の SHA-256 で探す |
 | 第 2 段階 | Vertex AI の Gemini に PDF を渡し、抽出項目を JSON で返させる |
 
 第 1 段階のサンプルの形式:
@@ -159,7 +159,7 @@ PDF は Vertex AI に送られる。Vertex AI は、送ったデータをモデ�
 ### 第 1 段階（サンプルの読み取り結果）
 
 1. [SR-01 のローカルでの試し方](./sr-01_gmail_invoice_ingest.md#第-1-段階サンプルのメール) を行い、請求書データを作る
-2. `sample_data/extraction/` に、サンプルのメールの PDF のファイル名に合わせた JSON を置く（`python -m app.jobs.hourly` の取込で同時に抽出される）
+2. `sample_data/extraction/` に、サンプルのメールの PDF の SHA-256（`shasum -a 256 {PDF}` で確かめられる）をファイル名にした JSON を置く（`python -m app.jobs.hourly` の取込で同時に抽出される）
 3. `extraction_results` の行ができていることを確認する
 
 サンプルの読み取り結果は、次の場合を確かめられるように用意する。
