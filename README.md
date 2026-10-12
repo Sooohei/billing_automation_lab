@@ -42,29 +42,27 @@ SR-00〜SR-03 をローカルで実装済み。
 
 ## ローカルでの動作確認方法
 
-Gmail・Gemini・freee とは通信せず、`sample_data/` のサンプルデータで動かす。
+Docker だけで動かす。Gmail・Gemini・freee とは通信せず、`sample_data/` のサンプルデータを使う。
 
 ### 必要なもの
 
 - Docker
-- [uv](https://docs.astral.sh/uv/)
 
 ### 1. 準備する（初回だけ）
 
 ```sh
-uv sync
-cp .env.example .env
-docker compose up -d
-uv run alembic upgrade head
+docker compose --profile app build
 ```
 
-2 回目以降は `docker compose up -d` だけでよい。
+ソースを変更したときも、もう一度実行する。
 
 ### 2. アプリを起動する
 
 ```sh
-uv run uvicorn app.main:app --reload
+docker compose --profile app up -d
 ```
+
+DB の準備（テーブルの作成）は、起動時に自動で行われる。
 
 確認: http://localhost:8000/ を開くと請求書一覧が表示される。
 
@@ -83,10 +81,8 @@ uv run uvicorn app.main:app --reload
 
 ### 4. 請求書を取り込む（SR-01・SR-02）
 
-別のターミナルで実行する。
-
 ```sh
-uv run python -m app.jobs.hourly
+docker compose --profile app run --rm app python -m app.jobs.hourly
 ```
 
 確認: 「作成した請求書データ=5 件」「作成した抽出結果=5 件」と表示される。
@@ -107,17 +103,15 @@ uv run python -m app.jobs.hourly
 
 確認: 請求書一覧で、申請した請求書が「申請済」になっている。
 
+### 止める
+
+```sh
+docker compose --profile app down
+```
+
 ### 最初からやり直す
 
 ```sh
 docker compose exec -T postgres psql -U app -d billing -c "TRUNCATE payment_request_inputs, extraction_results, invoices, ingested_messages, partner_emails, partners CASCADE"
 rm -rf .local/storage/invoices
-```
-
-### テストとチェック
-
-```sh
-uv run pytest
-uv run ruff check
-uv run mypy app
 ```

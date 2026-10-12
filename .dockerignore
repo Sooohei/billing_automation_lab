@@ -1,0 +1,15 @@
+# イメージに入れないもの
+.git
+.venv
+.env
+.env.*
+.local
+**/__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+docs
+tests
+scripts
+docker
+*.md

@@ -11,6 +11,33 @@ services:
       - postgres-data:/var/lib/postgresql/data
       # 初回起動時に、テスト用の DB（billing_test）を作る
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "app", "-d", "billing"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # アプリもコンテナで動かす場合に使う（`docker compose --profile app up` で起動する）
+  app:
+    profiles: ["app"]
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://app:app@postgres:5432/billing
+      APP_ORIGIN: http://localhost:8000,http://127.0.0.1:8000
+      AUTH_MODE: dev
+      STORAGE_BACKEND: local
+      LOCAL_STORAGE_DIR: /app/.local/storage
+      INGEST_START_DATE: "2026-10-01"
+    ports:
+      - "8000:8000"
+    volumes:
+      # 請求書ファイルの保存先。uv run で動かす場合と同じフォルダを使う
+      - ./.local/storage:/app/.local/storage
+    # 起動のたびにマイグレーションを適用してから、Web アプリを起動する
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
 
 volumes:
   postgres-data:

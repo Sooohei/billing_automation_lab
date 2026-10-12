@@ -39,6 +39,18 @@
 
 各 SR の設計書の「ローカルでの試し方」に書いたコマンドも、`uv run` を付けて実行する。
 
+アプリもコンテナで動かす場合は、次のコマンドを使う。`docker-compose.yml` のアプリのサービス（`app`）は profile を付けているので、`docker compose up -d` だけでは起動しない（PostgreSQL だけが起動する）。
+
+| 操作 | コマンド |
+|------|----------|
+| PostgreSQL と Web アプリの起動（起動時にマイグレーションを適用する） | `docker compose --profile app up -d --build` |
+| 1 時間ごとのバッチの実行 | `docker compose --profile app run --rm app python -m app.jobs.hourly` |
+| 停止 | `docker compose --profile app down` |
+
+- Web アプリとバッチは同じイメージ（`Dockerfile`）を使う。デプロイする場合の Cloud Run・Cloud Run Jobs でも、このイメージを使う想定
+- コンテナのアプリは、`uv run` で動かす場合と同じ開発用の DB（`billing`）と、同じ請求書ファイルの保存先（`.local/storage/`）を使う
+- 開発中は、コードの変更がすぐ反映される `uv run` で動かす
+
 ### テスト
 
 - 部分一意インデックス、advisory lock、`SELECT ... FOR UPDATE` など PostgreSQL の機能に頼るので、テストも PostgreSQL で行う（SQLite は使わない）
@@ -278,7 +290,9 @@ SR-00 は、利用者が誰であるかを記録しない。ログインして�
 ├── tests/
 ├── docker/
 │   └── postgres-init/        # PostgreSQL の初回起動時にテスト用の DB を作る SQL
-├── docker-compose.yml        # PostgreSQL（開発用とテスト用の DB）
+├── docker-compose.yml        # PostgreSQL（開発用とテスト用の DB）と、コンテナで動かす場合のアプリ
+├── Dockerfile                # Web アプリと 1 時間ごとのバッチで共通のイメージ
+├── .dockerignore
 ├── alembic.ini
 ├── pyproject.toml            # 依存関係、Ruff・mypy・pytest の設定
 ├── uv.lock
